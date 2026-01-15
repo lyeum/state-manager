@@ -22,7 +22,7 @@ dev = ["pytest>=9.0.2"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["GM"]
+packages = ["gm"]
 
 
 [tool.uv]
@@ -52,4 +52,4 @@ indent-style = "space"
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["GM"]
+known-first-party = ["gm"]
