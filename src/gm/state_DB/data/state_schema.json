@@ -1,0 +1,31 @@
+{
+    "states": [ 
+        {"name" :"cave", "type":"location"},
+        {"name" :"forest", "type":"location"},
+
+
+        {"name" :"normal", "type":"condition"},
+        {"name" :"injured", "type":"condition"},
+        {"name" :"poison", "type":"condition" },
+
+
+        {"name" :"safe", "type":"circumstance"},
+        {"name" :"un_safe", "type":"circumstance"},
+
+
+        {"name" :"heal", "type":"action"},
+        {"name" :"combat", "type":"action"},
+        {"name" :"escape", "type":"action"},
+        {"name" :"enter", "type":"action"},
+        {"name" :"explore", "type":"action"},
+        {"name" :"earn", "type":"action"},
+        {"name" :"lost", "type":"action"}
+
+
+    ],
+    
+    "transition": [
+        {"from": "normal", "to": "injured", "condition_ref": "poison"},
+        {"from":"cave","to":"treasure_room", "condition_ref": "scan_room"}
+    ]
+}
