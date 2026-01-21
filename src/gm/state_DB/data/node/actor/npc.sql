@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS npc (
 
 -- 2. updated_at 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_npc_updated_at()
-RETURNS TRIGGER AS $$ 
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
