@@ -7,7 +7,7 @@
 -- 1. 테이블 생성
 CREATE TABLE IF NOT EXISTS npc (
     -- 엔티티 필수
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),       -- NPC 고유 ID
+    npc_id UUID NOT NULL UNIQUE,       -- NPC 고유 ID
     entity_type VARCHAR(50) NOT NULL DEFAULT 'npc',      -- entity_type
     name VARCHAR(100) NOT NULL,                          -- NPC 이름 (시나리오 작성 시 지정)
     description TEXT DEFAULT '',                         -- 설명
