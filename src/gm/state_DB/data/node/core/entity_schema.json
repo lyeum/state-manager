@@ -1,92 +1,74 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "entity_schema.json",
-  "title": "GM Entity Schema",
-  "description": "TRPG state_DB에서 사용되는 모든 엔티티의 공통 스키마",
+  "$id": "act_concept.json",
+  "title": "Act Concept Schema",
+  "description": "플레이 세션 내 초기화 단위로, session이 선택한 story의 하위 단위이며 sequence/phase 초기화에 사용된다.",
   "type": "object",
   "required": ["id", "entity_type", "meta"],
-
-
+  
   "properties": {
     "id": {
-      "description": "엔티티 고유 식별자",
+      "description": "Act 고유 식별자",
       "type": "string",
       "minLength": 1
     },
     "entity_type": {
       "description": "엔티티 유형",
       "type": "string",
-      "enum": [
-        "story",
-        "act",
-        "sequence",
-        "npc",
-        "character",
-        "item",
-        "ability",
-        "inventory"
-      ]
+      "enum": ["act"]
     },
-
     "meta": {
       "description": "엔티티 공통 메타데이터",
       "type": "object",
       "required": ["created_at", "updated_at"],
-
       "properties": {
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" },
         "tags": {
           "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "items": { "type": "string" },
           "default": []
         }
       },
       "additionalProperties": false
     },
-
     "state": {
-      "description": "엔티티의 현재 상태 값",
+      "description": "Act 상태 및 초기화 관련 값",
       "type": "object",
       "properties": {
-        "numeric": {
-          "description": "HP, MP 등 수치형 상태",
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
-          },
-          "default": {}
+        "current_sequence": {
+          "description": "이 act에서 시작하는 sequence 번호",
+          "type": "integer",
+          "default": 1
         },
-        "boolean":{
-          "description": "버프/디버프 활성화 여부",
-          "type": "object",
-          "additionalProperties": {
-            "type": "boolean"
-          },
-          "default": {}
+        "current_phase": {
+          "description": "이 act 시작 시 session이 설정할 phase",
+          "type": "string",
+          "enum": ["exploration","combat","dialogue","rest"],
+          "default": "exploration"
+        },
+        "location": {
+          "description": "이 act에서 기본으로 설정되는 위치",
+          "type": "string",
+          "nullable": true
         }
-      }
+      },
+      "additionalProperties": true
     },
-
     "relations": {
       "description": "다른 엔티티와의 관계 정보",
       "type": "object",
       "additionalProperties": {
         "type": "array",
-        "items": {
-          "type": "string"
-        }
+        "items": { "type": "string" }
       },
       "default": {}
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "ownership": {
+    "definition": "story",
+    "selection": "session"
+  },
+  "used_by": ["GM","ScenarioWriter","RuleEngine","play_cache","play_log_DB"]
 }
