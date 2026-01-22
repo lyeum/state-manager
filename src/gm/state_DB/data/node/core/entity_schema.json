@@ -5,7 +5,7 @@
   "description": "플레이 세션 내 초기화 단위로, session이 선택한 story의 하위 단위이며 sequence/phase 초기화에 사용된다.",
   "type": "object",
   "required": ["id", "entity_type", "meta"],
-  
+
   "properties": {
     "id": {
       "description": "Act 고유 식별자",
