@@ -1,33 +1,27 @@
 -- npc.sql
 -- Entity schema 기반 NPC Node 정의
--- Graph 중심 설계를 위한 최소 상태 노드 + JSONB 확장 가능 구조
--- NPC는 session 필요 시 생성되며, 0개일 수도 있음
--- session_id는 가장 최근 생성된 세션 자동 참조
+-- 시나리오에서 생성되며 시나리오에 종속
+-- 세션 시작 시 시나리오와 함께 생성
 
 -- 1. 테이블 생성
 CREATE TABLE IF NOT EXISTS npc (
     -- 엔티티 필수
-    npc_id UUID NOT NULL UNIQUE,       -- NPC 고유 ID
-    entity_type VARCHAR(50) NOT NULL DEFAULT 'npc',      -- entity_type
-    name VARCHAR(100) NOT NULL,                          -- NPC 이름 (시나리오 작성 시 지정)
-    description TEXT DEFAULT '',                         -- 설명
+    npc_id UUID NOT NULL UNIQUE,
+    entity_type VARCHAR(50) NOT NULL DEFAULT 'npc',
+    name VARCHAR(100) NOT NULL,
+    description TEXT DEFAULT '',
 
     -- session/시나리오 참조
-    session_id UUID NOT NULL DEFAULT (
-        SELECT session_id
-        FROM session
-        ORDER BY started_at DESC
-        LIMIT 1
-    ),
-    scenario_id UUID NOT NULL,                           -- 시나리오 참조
-    scenario_npc_id UUID NOT NULL,                       -- 시나리오 내 NPC ID 참조
+    session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
+    scenario_id UUID NOT NULL,
+    scenario_npc_id UUID NOT NULL,
 
     -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     tags TEXT[] DEFAULT ARRAY[]::TEXT[],
 
-    -- 확장 가능 요소
+    -- 확장 요소
     state JSONB NOT NULL DEFAULT '{
         "numeric": {
             "HP": 100,
@@ -36,11 +30,16 @@ CREATE TABLE IF NOT EXISTS npc (
             "DEX": null,
             "INT": null,
             "LUX": null,
-            "SAN": null
+            "SAN": 10
         },
         "boolean": {}
     }'::jsonb,
-    relations JSONB DEFAULT '{}'::jsonb
+
+    -- RELATION 엣지 ID 저장
+    relations JSONB DEFAULT '[]'::jsonb,
+
+    -- 복합 고유 제약 (session 내에서 npc_id 고유)
+    CONSTRAINT pk_npc PRIMARY KEY (npc_id, session_id)
 );
 
 -- 2. updated_at 자동 갱신 트리거
@@ -57,34 +56,50 @@ BEFORE UPDATE ON npc
 FOR EACH ROW
 EXECUTE FUNCTION update_npc_updated_at();
 
--- 3. DML 예시
+-- 3. created_at을 session.started_at과 동기화
+CREATE OR REPLACE FUNCTION sync_npc_created_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    SELECT started_at INTO NEW.created_at
+    FROM session
+    WHERE session_id = NEW.session_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_npc_sync_created_at
+BEFORE INSERT ON npc
+FOR EACH ROW
+EXECUTE FUNCTION sync_npc_created_at();
+
+-- 4. DML 예시
 INSERT INTO npc (
-    name,
-    description,
+    npc_id,
+    session_id,
     scenario_id,
     scenario_npc_id,
+    name,
+    description,
     tags,
-    state,
-    relations
+    state
 ) VALUES (
-    'Goblin',                       -- name
-    '초기 전투용 고블린',            -- description
-    '<scenario_uuid>',               -- scenario_id: 시나리오 참조
-    '<scenario_npc_uuid>',           -- scenario_npc_id: 시나리오 내 NPC ID
-    ARRAY['enemy', 'melee'],        -- tags
-    '{
-        "numeric": {
-            "HP": 50,
-            "MP": 0,
-            "STR": 8,
-            "DEX": 6,
-            "INT": 3,
-            "SAN": 10
-        },
-        "boolean": {
-            "poisoned": false,
-            "stunned": false
-        }
-    }'::jsonb,
-    '{}'::jsonb
+    :npc_id,           -- 시나리오에서 전달
+    :session_id,       -- 현재 세션
+    :scenario_id,      -- 시나리오 UUID
+    :scenario_npc_id,  -- 시나리오 내 NPC ID
+    :name,
+    :description,
+    ARRAY['npc'],
+    jsonb_build_object(
+        'numeric', jsonb_build_object(
+            'HP', :HP,
+            'MP', :MP,
+            'STR', :STR,
+            'DEX', :DEX,
+            'INT', :INT,
+            'LUX', :LUX,
+            'SAN', :SAN
+        ),
+        'boolean', '{}'::jsonb
+    )
 );

@@ -1,33 +1,51 @@
--- enemy랑 npc id 모두 시나리오 종속 요소라서 고유  키 생성하면 안됨
--- npc랑 enenmy querry 생성하고 player_npc relation 엣지 생성 및 업데이트 querry정의
+-- enemy.sql
+-- Entity schema 기반 Enemy Node 정의
+-- 시나리오에서 생성되며 시나리오에 종속
+-- NPC와 유사하지만 전투 중심 엔티티
 
--- 1. Enemy 테이블 생성 (NPC 기반)
+-- 1. 테이블 생성
 CREATE TABLE IF NOT EXISTS enemy (
-    enemy_id UUID NOT NULL UNIQUE,
+    -- 엔티티 필수
+    enemy_id UUID NOT NULL,
     entity_type VARCHAR(50) NOT NULL DEFAULT 'enemy',
     name VARCHAR(100) NOT NULL,
     description TEXT DEFAULT '',
 
-    session_id UUID NOT NULL DEFAULT (
-        SELECT session_id
-        FROM session
-        ORDER BY started_at DESC
-        LIMIT 1
-    ),
+    -- session/시나리오 참조
+    session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
     scenario_id UUID NOT NULL,
+    scenario_enemy_id UUID NOT NULL,  -- 시나리오 내 Enemy ID
 
+    -- meta 정보
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     tags TEXT[] DEFAULT ARRAY[]::TEXT[],
 
-    -- meta: HP만
-    hp INT NOT NULL DEFAULT 100,
+    -- 확장 요소 (player/npc와 동일 구조)
+    state JSONB NOT NULL DEFAULT '{
+        "numeric": {
+            "HP": 100,
+            "MP": 0,
+            "STR": null,
+            "DEX": null,
+            "INT": null,
+            "LUX": null,
+            "SAN": null
+        },
+        "boolean": {}
+    }'::jsonb,
 
-    -- dropped items: item_id array
-    dropped_items UUID[] DEFAULT ARRAY[]::UUID[]
+    -- RELATION 엣지 ID 저장
+    relations JSONB DEFAULT '[]'::jsonb,
+
+    -- 드롭 아이템 (DROP_ITEM 엣지와 중복이지만 빠른 조회용)
+    dropped_items UUID[] DEFAULT ARRAY[]::UUID[],
+
+    -- 복합 고유 제약
+    CONSTRAINT pk_enemy PRIMARY KEY (enemy_id, session_id)
 );
 
--- 2. updated_at 트리거 (NPC와 동일)
+-- 2. updated_at 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_enemy_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -41,21 +59,50 @@ BEFORE UPDATE ON enemy
 FOR EACH ROW
 EXECUTE FUNCTION update_enemy_updated_at();
 
--- 3. DML 예시
+-- 3. created_at을 session.started_at과 동기화
+CREATE OR REPLACE FUNCTION sync_enemy_created_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    SELECT started_at INTO NEW.created_at
+    FROM session
+    WHERE session_id = NEW.session_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_enemy_sync_created_at
+BEFORE INSERT ON enemy
+FOR EACH ROW
+EXECUTE FUNCTION sync_enemy_created_at();
+
+-- 4. DML 예시
 INSERT INTO enemy (
-    name,
-    description,
+    enemy_id,
+    session_id,
     scenario_id,
     scenario_enemy_id,
+    name,
+    description,
     tags,
-    hp,
-    dropped_items
+    state
 ) VALUES (
-    'Goblin',
-    '초기 전투용 고블린',
-    '<scenario_uuid>',
-    '<scenario_enemy_uuid>',
+    :enemy_id,           -- 시나리오에서 전달
+    :session_id,
+    :scenario_id,
+    :scenario_enemy_id,
+    :name,
+    :description,
     ARRAY['enemy', 'melee'],
-    50,
-    ARRAY['<item_uuid1>', '<item_uuid2>']
+    jsonb_build_object(
+        'numeric', jsonb_build_object(
+            'HP', :HP,
+            'MP', 0,
+            'STR', :STR,
+            'DEX', :DEX,
+            'INT', :INT,
+            'LUX', null,
+            'SAN', null
+        ),
+        'boolean', '{}'::jsonb
+    )
 );
