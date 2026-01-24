@@ -18,7 +18,7 @@
 SELECT * FROM get_turn_history($1);  -- session_id
 
 -- 또는 직접 쿼리
-SELECT 
+SELECT
     history_id,
     session_id,
     turn_number,
@@ -46,7 +46,7 @@ ORDER BY turn_number ASC;
 -- API: GET /state/session/{session_id}/turn-history?limit=10
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -67,7 +67,7 @@ LIMIT $2;  -- limit (예: 10)
 SELECT * FROM get_turn_details($1, $2);  -- session_id, turn_number
 
 -- 또는 직접 쿼리
-SELECT 
+SELECT
     history_id,
     turn_number,
     phase_at_turn,
@@ -89,7 +89,7 @@ WHERE session_id = $1
 SELECT * FROM get_turn_range($1, $2, $3);  -- session_id, start_turn, end_turn
 
 -- 또는 직접 쿼리
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -106,7 +106,7 @@ ORDER BY turn_number ASC;
 -- 용도: "마지막 Turn에서 어떤 변경이 있었나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -138,13 +138,13 @@ SELECT update_turn_state_changes(
 
 -- 또는 직접 UPDATE
 UPDATE turn_history
-SET 
+SET
     state_changes = $2,  -- JSONB
     turn_type = $3       -- VARCHAR
 WHERE session_id = $1
   AND turn_number = (
-      SELECT current_turn 
-      FROM session 
+      SELECT current_turn
+      FROM session
       WHERE session_id = $1
   );
 
@@ -211,7 +211,7 @@ SELECT * FROM get_turns_per_phase($1);  -- session_id
 -- 용도: "combat Phase에서의 Turn만 보기"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -229,19 +229,19 @@ ORDER BY turn_number ASC;
 -- --------------------------------------------------------------------
 
 WITH phase_sessions AS (
-    SELECT 
+    SELECT
         phase_at_turn,
         COUNT(*) AS turn_count
     FROM turn_history
     WHERE session_id = $1
     GROUP BY phase_at_turn
 )
-SELECT 
+SELECT
     phase_at_turn AS phase,
     turn_count,
     turn_count::float / NULLIF(
-        (SELECT COUNT(DISTINCT new_phase) 
-         FROM phase_history 
+        (SELECT COUNT(DISTINCT new_phase)
+         FROM phase_history
          WHERE session_id = $1), 0
     ) AS avg_turns_per_phase_visit
 FROM phase_sessions
@@ -257,7 +257,7 @@ ORDER BY turn_count DESC;
 -- 용도: "어떤 종류의 Turn이 많았나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_type,
     COUNT(*) AS count,
     ROUND(COUNT(*)::numeric / (
@@ -282,7 +282,7 @@ ORDER BY count DESC;
 -- 용도: "combat_action Turn만 보기"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     state_changes,
@@ -298,7 +298,7 @@ ORDER BY turn_number ASC;
 -- 용도: "기본값 'auto'로 남아있는 Turn"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     state_changes,
@@ -318,7 +318,7 @@ ORDER BY turn_number DESC;
 -- 용도: "player_hp가 변경된 Turn 찾기"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -337,7 +337,7 @@ ORDER BY turn_number ASC;
 -- 용도: "gold가 증가한 Turn만"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     state_changes,
@@ -355,7 +355,7 @@ ORDER BY turn_number ASC;
 -- 용도: "HP와 골드가 동시에 변한 Turn"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     state_changes,
@@ -371,7 +371,7 @@ ORDER BY turn_number ASC;
 -- 용도: "아무 변경도 없는 Turn (데이터 무결성 확인)"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -387,7 +387,7 @@ ORDER BY turn_number ASC;
 -- 용도: "각 Turn에서 player_hp 변화량만 추출"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     state_changes->>'player_hp' AS player_hp_change,
@@ -419,7 +419,7 @@ SELECT get_average_turn_duration($1);  -- session_id
 -- 용도: "Turn별로 얼마나 걸렸나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     created_at,
@@ -435,7 +435,7 @@ ORDER BY turn_number ASC;
 -- --------------------------------------------------------------------
 
 WITH turn_durations AS (
-    SELECT 
+    SELECT
         turn_number,
         phase_at_turn,
         turn_type,
@@ -443,7 +443,7 @@ WITH turn_durations AS (
     FROM turn_history
     WHERE session_id = $1
 )
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -460,7 +460,7 @@ LIMIT 10;
 -- --------------------------------------------------------------------
 
 WITH turn_durations AS (
-    SELECT 
+    SELECT
         turn_number,
         phase_at_turn,
         turn_type,
@@ -468,7 +468,7 @@ WITH turn_durations AS (
     FROM turn_history
     WHERE session_id = $1
 )
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -485,14 +485,14 @@ ORDER BY duration ASC;
 -- --------------------------------------------------------------------
 
 WITH turn_durations AS (
-    SELECT 
+    SELECT
         turn_number,
         phase_at_turn,
         created_at - LAG(created_at) OVER (ORDER BY turn_number) AS duration
     FROM turn_history
     WHERE session_id = $1
 )
-SELECT 
+SELECT
     phase_at_turn AS phase,
     COUNT(*) AS turn_count,
     AVG(duration) AS avg_duration,
@@ -513,7 +513,7 @@ ORDER BY avg_duration DESC;
 -- 용도: "Turn과 Phase 전환을 함께 보기"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     th.turn_number,
     th.phase_at_turn,
     th.turn_type,
@@ -523,8 +523,8 @@ SELECT
     ph.transition_reason,
     th.created_at
 FROM turn_history th
-LEFT JOIN phase_history ph 
-    ON th.session_id = ph.session_id 
+LEFT JOIN phase_history ph
+    ON th.session_id = ph.session_id
     AND th.turn_number = ph.turn_at_transition
 WHERE th.session_id = $1
 ORDER BY th.turn_number ASC;
@@ -535,7 +535,7 @@ ORDER BY th.turn_number ASC;
 -- 용도: "Session 정보와 함께 Turn 이력 확인"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.scenario_id,
     s.current_turn,
@@ -556,7 +556,7 @@ ORDER BY th.turn_number ASC;
 -- (개념적 쿼리 - 실제로는 state_changes에서 추출)
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     th.turn_number,
     th.phase_at_turn,
     th.state_changes->>'player_hp' AS hp_change,
@@ -594,7 +594,7 @@ SELECT replay_to_turn($1, $2);  -- session_id, target_turn
 -- --------------------------------------------------------------------
 
 WITH hp_changes AS (
-    SELECT 
+    SELECT
         turn_number,
         (state_changes->>'player_hp')::int AS hp_change
     FROM turn_history
@@ -602,7 +602,7 @@ WITH hp_changes AS (
       AND state_changes ? 'player_hp'
     ORDER BY turn_number
 )
-SELECT 
+SELECT
     turn_number,
     hp_change,
     SUM(hp_change) OVER (ORDER BY turn_number) AS cumulative_hp_change
@@ -648,8 +648,8 @@ WITH expected_turns AS (
 SELECT expected_turn
 FROM expected_turns
 WHERE expected_turn NOT IN (
-    SELECT turn_number 
-    FROM turn_history 
+    SELECT turn_number
+    FROM turn_history
     WHERE session_id = $1
 )
 ORDER BY expected_turn;
@@ -660,7 +660,7 @@ ORDER BY expected_turn;
 -- 용도: "같은 Turn이 여러 번 기록됐나 (오류)"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     COUNT(*) AS duplicate_count
 FROM turn_history
@@ -675,13 +675,13 @@ ORDER BY turn_number;
 -- 용도: "Turn의 phase_at_turn이 실제 Phase와 다른 경우"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     th.turn_number,
     th.phase_at_turn AS recorded_phase,
     ph.new_phase AS actual_phase,
     th.created_at
 FROM turn_history th
-LEFT JOIN phase_history ph 
+LEFT JOIN phase_history ph
     ON th.session_id = ph.session_id
     AND th.turn_number >= ph.turn_at_transition
 WHERE th.session_id = $1
@@ -694,7 +694,7 @@ ORDER BY th.turn_number;
 -- 용도: "HP가 한 번에 -100 이상 변한 Turn"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     turn_type,
@@ -766,7 +766,7 @@ WHERE session_id IN (
 -- 용도: 세션 종료 후 플레이 리뷰
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     COUNT(*) AS total_turns,
     COUNT(DISTINCT phase_at_turn) AS phases_used,
     COUNT(DISTINCT turn_type) AS turn_types_used,
@@ -783,7 +783,7 @@ WHERE session_id = $1;
 -- 용도: "어떤 상태가 가장 자주 변경됐나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     key AS state_key,
     COUNT(*) AS change_count,
     ROUND(COUNT(*)::numeric / (
@@ -819,7 +819,7 @@ WHERE session_id = $1;
 -- 용도: 시각화 대시보드
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     DATE(created_at) AS date,
     EXTRACT(HOUR FROM created_at) AS hour,
     phase_at_turn,
@@ -839,7 +839,7 @@ ORDER BY date, hour, phase_at_turn;
 -- 용도: 문제 발생 시 전체 이력 확인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     history_id,
     session_id,
     turn_number,
@@ -867,7 +867,7 @@ INSERT INTO turn_history (
     state_changes,
     created_at
 )
-VALUES 
+VALUES
     ($1, 1, 'dialogue', 'state_change', '{"player_hp": -10}'::jsonb, NOW() - INTERVAL '1 hour'),
     ($1, 2, 'dialogue', 'state_change', '{"gold": 50}'::jsonb, NOW() - INTERVAL '55 minutes'),
     ($1, 3, 'combat', 'phase_transition', '{"phase_changed": "combat"}'::jsonb, NOW() - INTERVAL '50 minutes'),
@@ -881,8 +881,8 @@ VALUES
 -- --------------------------------------------------------------------
 
 SELECT EXISTS(
-    SELECT 1 
-    FROM turn_history 
+    SELECT 1
+    FROM turn_history
     WHERE session_id = $1
 ) AS has_turn_history;
 
@@ -892,7 +892,7 @@ SELECT EXISTS(
 -- 용도: 데이터 무결성 확인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     COUNT(*) AS turn_count,
     MIN(turn_number) AS first_turn,
@@ -909,11 +909,11 @@ ORDER BY turn_count DESC;
 -- 용도: 데이터 무결성 검증
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_turn AS session_current_turn,
     MAX(th.turn_number) AS max_turn_in_history,
-    CASE 
+    CASE
         WHEN s.current_turn = MAX(th.turn_number) THEN 'OK'
         ELSE 'MISMATCH'
     END AS status

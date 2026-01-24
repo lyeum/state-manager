@@ -36,7 +36,7 @@ BEGIN;
 -- 1. 인벤토리에 아이템 추가 (또는 수량 증가)
 INSERT INTO player_inventory (player_id, item_id, quantity)
 VALUES ('player_uuid', 5, 1)
-ON CONFLICT (player_id, item_id) 
+ON CONFLICT (player_id, item_id)
 DO UPDATE SET quantity = player_inventory.quantity - 1;
 
 -- 2. Turn 증가

@@ -91,7 +91,7 @@ CREATE OR REPLACE FUNCTION update_turn_state_changes(
 RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE turn_history
-    SET 
+    SET
         state_changes = p_state_changes,
         turn_type = p_turn_type
     WHERE session_id = p_session_id
@@ -117,7 +117,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         th.turn_number,
         th.phase_at_turn,
         th.turn_type,
@@ -143,7 +143,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         th.turn_number,
         th.phase_at_turn,
         th.turn_type,
@@ -170,7 +170,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         th.turn_number,
         th.phase_at_turn,
         th.turn_type,
@@ -196,7 +196,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         th.phase_at_turn AS phase,
         COUNT(*) AS turn_count
     FROM turn_history th
@@ -213,7 +213,7 @@ DECLARE
     total_duration INTERVAL;
     turn_count INTEGER;
 BEGIN
-    SELECT 
+    SELECT
         MAX(created_at) - MIN(created_at),
         COUNT(*)
     INTO total_duration, turn_count
@@ -245,7 +245,7 @@ DECLARE
 BEGIN
     -- 해당 Turn까지의 모든 상태 변경을 순차적으로 적용
     -- (실제 구현 시 복잡한 롤백 로직 필요)
-    
+
     SELECT jsonb_agg(
         jsonb_build_object(
             'turn', turn_number,

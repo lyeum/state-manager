@@ -4,19 +4,19 @@
 -- API: GET /state/session/{session_id}
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
-    
+
     -- 시나리오 진행 단위 (외부 전달)
     current_act,
     current_sequence,
     location,
-    
+
     -- 내부 관리 단위
     current_phase,
     current_turn,
-    
+
     -- 세션 상태
     status,
     started_at,

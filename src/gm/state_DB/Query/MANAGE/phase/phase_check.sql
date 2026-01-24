@@ -11,4 +11,3 @@ WHERE session_id = $1;
 SELECT * FROM get_phase_history($1)
 ORDER BY transitioned_at DESC
 LIMIT 5;
-

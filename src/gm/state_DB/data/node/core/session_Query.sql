@@ -38,7 +38,7 @@ SELECT create_session(
 -- --------------------------------------------------------------------
 
 -- 특정 session 조회
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -52,7 +52,7 @@ FROM session
 WHERE session_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::UUID;
 
 -- 생성된 player 확인 (트리거로 자동 생성됨)
-SELECT 
+SELECT
     player_id,
     session_id,
     name,
@@ -72,7 +72,7 @@ WHERE session_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::UUID;
 SELECT * FROM get_active_sessions();
 
 -- 또는 직접 쿼리
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_phase,
@@ -96,19 +96,19 @@ ORDER BY started_at DESC;
 -- API: GET /state/session/{session_id}
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
-    
+
     -- 시나리오 진행 단위 (외부 전달)
     current_act,
     current_sequence,
     location,
-    
+
     -- 내부 관리 단위
     current_phase,
     current_turn,
-    
+
     -- 세션 상태
     status,
     started_at,
@@ -151,21 +151,21 @@ WHERE session_id = $1;
 -- 용도: 대시보드 표시
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     current_phase,
     current_turn,
-    
+
     -- 세션 진행 시간
     NOW() - started_at AS session_duration,
-    
+
     -- Phase별 Turn 수 (서브쿼리)
-    (SELECT COUNT(*) FROM turn_history th 
-     WHERE th.session_id = s.session_id 
+    (SELECT COUNT(*) FROM turn_history th
+     WHERE th.session_id = s.session_id
        AND th.phase_at_turn = 'combat') AS combat_turns,
-    
-    (SELECT COUNT(*) FROM turn_history th 
-     WHERE th.session_id = s.session_id 
+
+    (SELECT COUNT(*) FROM turn_history th
+     WHERE th.session_id = s.session_id
        AND th.phase_at_turn = 'exploration') AS exploration_turns
 FROM session s
 WHERE session_id = $1;
@@ -357,7 +357,7 @@ SELECT advance_act($1);  -- session_id
 -- 용도: UI 표시
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     current_act,
     current_sequence
 FROM session
@@ -415,7 +415,7 @@ SELECT pause_session($1);  -- session_id
 -- 용도: 일시정지 시점 데이터 확인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     snapshot_id,
     session_id,
     snapshot_type,
@@ -484,7 +484,7 @@ ORDER BY ended_at DESC;
 -- API: GET /state/session/{session_id}/full
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     -- Session 정보
     s.session_id,
     s.scenario_id,
@@ -494,14 +494,14 @@ SELECT
     s.current_turn,
     s.location,
     s.status,
-    
+
     -- Player 정보
     p.player_id,
     p.name AS player_name,
     p.hp,
     p.max_hp,
     p.gold,
-    
+
     -- 통계
     (SELECT COUNT(*) FROM player_inventory pi WHERE pi.player_id = p.player_id) AS item_count,
     (SELECT COUNT(*) FROM player_npc_relations pnr WHERE pnr.player_id = p.player_id) AS npc_relation_count
@@ -515,7 +515,7 @@ WHERE s.session_id = $1;
 -- 용도: Phase 전환 흐름 분석
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_phase,
     ph.previous_phase,
@@ -533,7 +533,7 @@ ORDER BY ph.transitioned_at ASC;
 -- 용도: 게임 진행 타임라인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_turn,
     th.turn_number,
@@ -597,7 +597,7 @@ BEGIN;
 -- 1. 인벤토리에 아이템 추가 (또는 수량 증가)
 INSERT INTO player_inventory (player_id, item_id, quantity)
 VALUES ('player_uuid', 5, 1)
-ON CONFLICT (player_id, item_id) 
+ON CONFLICT (player_id, item_id)
 DO UPDATE SET quantity = player_inventory.quantity + 1;
 
 -- 2. Turn 증가
@@ -688,7 +688,7 @@ SELECT * FROM turn_history WHERE session_id = $1 ORDER BY turn_number;
 -- --------------------------------------------------------------------
 
 -- Turn 증가 속도 분석
-SELECT 
+SELECT
     turn_number,
     created_at,
     created_at - LAG(created_at) OVER (ORDER BY turn_number) AS turn_duration
@@ -725,16 +725,16 @@ DECLARE
 BEGIN
     -- Session 생성
     test_session_id := create_session(test_scenario_id, 1, 1, 'Test Town');
-    
+
     RAISE NOTICE 'Test session created: %', test_session_id;
-    
+
     -- Phase 전환 테스트
     PERFORM change_phase(test_session_id, 'exploration'::phase_type);
     PERFORM advance_turn(test_session_id);
-    
+
     PERFORM change_phase(test_session_id, 'combat'::phase_type);
     PERFORM advance_turn(test_session_id);
-    
+
     RAISE NOTICE 'Test data created successfully';
 END $$;
 

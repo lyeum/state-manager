@@ -18,7 +18,7 @@
 SELECT * FROM get_phase_history($1);  -- session_id
 
 -- 또는 직접 쿼리
-SELECT 
+SELECT
     history_id,
     session_id,
     previous_phase,
@@ -45,7 +45,7 @@ ORDER BY transitioned_at ASC;
 -- API: GET /state/session/{session_id}/phase-history?limit=5
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
@@ -63,7 +63,7 @@ LIMIT $2;  -- limit (예: 5)
 -- API: GET /state/session/{session_id}/phase-history?phase=combat
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
@@ -80,7 +80,7 @@ ORDER BY transitioned_at DESC;
 -- 용도: "Turn 5~15 사이에 Phase가 몇 번 바뀌었나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
@@ -97,7 +97,7 @@ ORDER BY turn_at_transition ASC;
 -- 용도: "마지막으로 Phase가 바뀐 게 언제였지?"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
@@ -190,14 +190,14 @@ SELECT * FROM get_phase_statistics($1);  -- session_id
 -- --------------------------------------------------------------------
 
 WITH phase_durations AS (
-    SELECT 
+    SELECT
         ph.new_phase,
-        LEAD(ph.transitioned_at, 1, NOW()) OVER (ORDER BY ph.transitioned_at) 
+        LEAD(ph.transitioned_at, 1, NOW()) OVER (ORDER BY ph.transitioned_at)
             - ph.transitioned_at AS duration
     FROM phase_history ph
     WHERE ph.session_id = $1
 )
-SELECT 
+SELECT
     new_phase AS phase,
     AVG(duration) AS avg_duration,
     MIN(duration) AS min_duration,
@@ -213,7 +213,7 @@ ORDER BY avg_duration DESC;
 -- 용도: "오전/오후/저녁에 어떤 Phase가 많았나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     EXTRACT(HOUR FROM transitioned_at) AS hour_of_day,
     new_phase,
     COUNT(*) AS transition_count
@@ -232,7 +232,7 @@ ORDER BY hour_of_day, new_phase;
 -- 용도: "어떤 Phase에서 어떤 Phase로 자주 전환되나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     COUNT(*) AS transition_count
@@ -255,7 +255,7 @@ ORDER BY transition_count DESC;
 -- 용도: "combat으로 몇 번이나 전환됐나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     new_phase,
     COUNT(*) AS entry_count
 FROM phase_history
@@ -269,7 +269,7 @@ GROUP BY new_phase;
 -- 용도: "combat에서 몇 번이나 빠져나왔나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     COUNT(*) AS exit_count
 FROM phase_history
@@ -284,7 +284,7 @@ GROUP BY previous_phase;
 -- --------------------------------------------------------------------
 
 WITH phase_sequence AS (
-    SELECT 
+    SELECT
         previous_phase,
         new_phase,
         LEAD(new_phase, 1) OVER (ORDER BY transitioned_at) AS next_phase,
@@ -292,7 +292,7 @@ WITH phase_sequence AS (
     FROM phase_history
     WHERE session_id = $1
 )
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     next_phase,
@@ -312,7 +312,7 @@ ORDER BY transitioned_at;
 -- 용도: "어제 플레이한 내용 중 Phase 전환"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
@@ -329,7 +329,7 @@ ORDER BY transitioned_at ASC;
 -- 용도: "enemy_encounter로 인한 combat 전환만 보기"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     previous_phase,
     new_phase,
     turn_at_transition,
@@ -345,7 +345,7 @@ ORDER BY transitioned_at DESC;
 -- 용도: "원인을 기록하지 않은 전환 찾기"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     history_id,
     previous_phase,
     new_phase,
@@ -366,7 +366,7 @@ ORDER BY transitioned_at DESC;
 -- 용도: Session 정보와 함께 Phase 이력 확인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.scenario_id,
     s.current_phase,
@@ -386,7 +386,7 @@ ORDER BY ph.transitioned_at ASC;
 -- 용도: "Phase 전환 시 어떤 상태 변경이 있었나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     ph.previous_phase,
     ph.new_phase,
     ph.turn_at_transition,
@@ -395,8 +395,8 @@ SELECT
     th.state_changes,
     ph.transitioned_at
 FROM phase_history ph
-LEFT JOIN turn_history th 
-    ON ph.session_id = th.session_id 
+LEFT JOIN turn_history th
+    ON ph.session_id = th.session_id
     AND ph.turn_at_transition = th.turn_number
 WHERE ph.session_id = $1
 ORDER BY ph.transitioned_at ASC;
@@ -407,14 +407,14 @@ ORDER BY ph.transitioned_at ASC;
 -- 용도: "같은 시나리오를 플레이한 세션들의 Phase 패턴 비교"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.scenario_id,
     ph.new_phase,
     COUNT(*) AS transition_count,
     AVG(
         LEAD(ph.transitioned_at, 1, NOW()) OVER (
-            PARTITION BY ph.session_id 
+            PARTITION BY ph.session_id
             ORDER BY ph.transitioned_at
         ) - ph.transitioned_at
     ) AS avg_phase_duration
@@ -435,17 +435,17 @@ ORDER BY s.session_id, transition_count DESC;
 -- --------------------------------------------------------------------
 
 WITH phase_durations AS (
-    SELECT 
+    SELECT
         history_id,
         session_id,
         new_phase,
         transitioned_at,
-        LEAD(transitioned_at, 1, NOW()) OVER (ORDER BY transitioned_at) 
+        LEAD(transitioned_at, 1, NOW()) OVER (ORDER BY transitioned_at)
             - transitioned_at AS duration
     FROM phase_history
     WHERE session_id = $1
 )
-SELECT 
+SELECT
     history_id,
     new_phase,
     duration,
@@ -461,17 +461,17 @@ ORDER BY duration ASC;
 -- --------------------------------------------------------------------
 
 WITH phase_durations AS (
-    SELECT 
+    SELECT
         history_id,
         session_id,
         new_phase,
         transitioned_at,
-        LEAD(transitioned_at, 1, NOW()) OVER (ORDER BY transitioned_at) 
+        LEAD(transitioned_at, 1, NOW()) OVER (ORDER BY transitioned_at)
             - transitioned_at AS duration
     FROM phase_history
     WHERE session_id = $1
 )
-SELECT 
+SELECT
     history_id,
     new_phase,
     duration,
@@ -486,7 +486,7 @@ ORDER BY duration DESC;
 -- 용도: "exploration → exploration 같은 중복 전환"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     history_id,
     previous_phase,
     new_phase,
@@ -505,7 +505,7 @@ ORDER BY transitioned_at DESC;
 -- 용도: "Phase가 한 번도 안 바뀐 세션"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_phase,
     s.started_at,
@@ -568,20 +568,20 @@ WHERE history_id = $1;
 -- --------------------------------------------------------------------
 
 WITH phase_summary AS (
-    SELECT 
+    SELECT
         new_phase,
         COUNT(*) AS transition_count,
         MIN(transitioned_at) AS first_transition,
         MAX(transitioned_at) AS last_transition,
         SUM(
-            LEAD(transitioned_at, 1, NOW()) OVER (ORDER BY transitioned_at) 
+            LEAD(transitioned_at, 1, NOW()) OVER (ORDER BY transitioned_at)
             - transitioned_at
         ) AS total_duration
     FROM phase_history
     WHERE session_id = $1
     GROUP BY new_phase
 )
-SELECT 
+SELECT
     new_phase AS phase,
     transition_count,
     total_duration,
@@ -597,7 +597,7 @@ ORDER BY total_duration DESC;
 -- 용도: 시각화 대시보드
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     DATE(transitioned_at) AS date,
     EXTRACT(HOUR FROM transitioned_at) AS hour,
     new_phase,
@@ -635,7 +635,7 @@ WHERE session_id = $1;
 -- 용도: 문제 발생 시 전체 이력 확인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     history_id,
     session_id,
     previous_phase,
@@ -662,7 +662,7 @@ INSERT INTO phase_history (
     transition_reason,
     transitioned_at
 )
-VALUES 
+VALUES
     ($1, NULL, 'dialogue', 0, 'session_start', NOW() - INTERVAL '1 hour'),
     ($1, 'dialogue', 'exploration', 1, 'story_progression', NOW() - INTERVAL '50 minutes'),
     ($1, 'exploration', 'combat', 5, 'enemy_encounter', NOW() - INTERVAL '30 minutes'),
@@ -675,8 +675,8 @@ VALUES
 -- --------------------------------------------------------------------
 
 SELECT EXISTS(
-    SELECT 1 
-    FROM phase_history 
+    SELECT 1
+    FROM phase_history
     WHERE session_id = $1
 ) AS has_phase_history;
 
@@ -686,7 +686,7 @@ SELECT EXISTS(
 -- 용도: 데이터 무결성 확인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     COUNT(*) AS phase_transition_count,
     MIN(transitioned_at) AS first_transition,

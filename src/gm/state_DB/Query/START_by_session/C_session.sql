@@ -31,7 +31,7 @@ SELECT create_session(
 -- --------------------------------------------------------------------
 
 -- 특정 session 조회
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -45,7 +45,7 @@ FROM session
 WHERE session_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::UUID;
 
 -- 생성된 player 확인 (트리거로 자동 생성됨)
-SELECT 
+SELECT
     player_id,
     session_id,
     name,
@@ -65,7 +65,7 @@ WHERE session_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::UUID;
 SELECT * FROM get_active_sessions();
 
 -- 또는 직접 쿼리
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_phase,

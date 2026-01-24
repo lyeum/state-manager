@@ -8,7 +8,7 @@ SELECT advance_act($1);  -- session_id
 
 -- 또는 직접 쿼리
 UPDATE session
-SET 
+SET
     current_act = current_act + 1,
     current_sequence = 1  -- Act가 바뀌면 Sequence는 1로 초기화
 WHERE session_id = $1

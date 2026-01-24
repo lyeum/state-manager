@@ -3,7 +3,7 @@
 -- 용도: Phase 전환 흐름 분석
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_phase,
     ph.previous_phase,
@@ -14,4 +14,3 @@ FROM session s
 LEFT JOIN phase_history ph ON s.session_id = ph.session_id
 WHERE s.session_id = $1
 ORDER BY ph.transitioned_at ASC;
-

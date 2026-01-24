@@ -5,7 +5,7 @@
 -- --------------------------------------------------------------------
 
 UPDATE session
-SET 
+SET
     current_act = GREATEST(current_act - 1, 1),  -- 최소 1
     current_sequence = 1  -- Sequence는 1로 초기화
 WHERE session_id = $1

@@ -1,6 +1,6 @@
 -- session.sql
 -- 플레이 단위의 전역 컨테이너
--- 
+--
 -- 개념 구분:
 --   [외부 전달] scenario_id, current_act, current_sequence, location
 --   [내부 관리] current_phase (규칙 컨텍스트), current_turn (상태 확정 카운터)
@@ -145,7 +145,7 @@ CREATE OR REPLACE FUNCTION end_session(p_session_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE session
-    SET 
+    SET
         status = 'ended',
         ended_at = NOW()
     WHERE session_id = p_session_id
@@ -164,7 +164,7 @@ CREATE OR REPLACE FUNCTION pause_session(p_session_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE session
-    SET 
+    SET
         status = 'paused',
         paused_at = NOW()
     WHERE session_id = p_session_id
@@ -183,7 +183,7 @@ CREATE OR REPLACE FUNCTION resume_session(p_session_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE session
-    SET 
+    SET
         status = 'active',
         paused_at = NULL
     WHERE session_id = p_session_id
@@ -199,7 +199,7 @@ $$ LANGUAGE plpgsql;
 -- ====================================================================
 
 -- [내부 관리] Phase 변경 - 허용 행동 및 활성 규칙 범위 전환
--- 
+--
 -- Phase별 규칙 범위:
 --   - exploration: movement, perception, interaction
 --   - combat: initiative, attack, defense, damage
@@ -233,7 +233,7 @@ $$ LANGUAGE plpgsql;
 -- ====================================================================
 
 -- [내부 관리] 상태 변경 트랜잭션 commit 시 Turn 증가
--- 
+--
 -- Turn 증가 조건:
 --   - RuleEngine 판정 결과로 State 변경이 확정될 때
 --   - GM이 상태 적용을 승인(commit)했을 때
@@ -268,7 +268,7 @@ $$ LANGUAGE plpgsql;
 -- ====================================================================
 
 -- [외부 전달] Act/Sequence 업데이트 (시나리오 진행 단위)
--- 
+--
 -- 시나리오 진행 구조: story > act > sequence > scene > beat
 -- GM 또는 시나리오 시스템에 의해 외부에서 호출됨
 
@@ -282,7 +282,7 @@ DECLARE
     result RECORD;
 BEGIN
     UPDATE session
-    SET 
+    SET
         current_act = p_new_act,
         current_sequence = p_new_sequence
     WHERE session_id = p_session_id
@@ -319,7 +319,7 @@ DECLARE
     result RECORD;
 BEGIN
     UPDATE session
-    SET 
+    SET
         current_act = current_act + 1,
         current_sequence = 1  -- Act가 바뀌면 Sequence 초기화
     WHERE session_id = p_session_id
@@ -348,7 +348,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         s.session_id,
         s.scenario_id,
         s.current_phase,

@@ -3,7 +3,7 @@
 -- 용도: 게임 진행 타임라인
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_turn,
     th.turn_number,

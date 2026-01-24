@@ -90,7 +90,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         ph.previous_phase,
         ph.new_phase,
         ph.turn_at_transition,
@@ -142,14 +142,14 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     WITH phase_durations AS (
-        SELECT 
+        SELECT
             ph.new_phase,
-            LEAD(ph.transitioned_at, 1, NOW()) OVER (ORDER BY ph.transitioned_at) 
+            LEAD(ph.transitioned_at, 1, NOW()) OVER (ORDER BY ph.transitioned_at)
                 - ph.transitioned_at AS duration
         FROM phase_history ph
         WHERE ph.session_id = p_session_id
     )
-    SELECT 
+    SELECT
         pd.new_phase AS phase,
         SUM(pd.duration) AS total_duration,
         COUNT(*) AS transition_count

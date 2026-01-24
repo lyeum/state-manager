@@ -45,7 +45,7 @@ SELECT * FROM turn_history WHERE session_id = $1 ORDER BY turn_number;
 -- --------------------------------------------------------------------
 
 -- Turn 증가 속도 분석
-SELECT 
+SELECT
     turn_number,
     created_at,
     created_at - LAG(created_at) OVER (ORDER BY turn_number) AS turn_duration
@@ -82,16 +82,16 @@ DECLARE
 BEGIN
     -- Session 생성
     test_session_id := create_session(test_scenario_id, 1, 1, 'Test Town');
-    
+
     RAISE NOTICE 'Test session created: %', test_session_id;
-    
+
     -- Phase 전환 테스트
     PERFORM change_phase(test_session_id, 'exploration'::phase_type);
     PERFORM advance_turn(test_session_id);
-    
+
     PERFORM change_phase(test_session_id, 'combat'::phase_type);
     PERFORM advance_turn(test_session_id);
-    
+
     RAISE NOTICE 'Test data created successfully';
 END $$;
 
@@ -137,7 +137,7 @@ SELECT update_act_sequence(
 
 -- 또는 직접 쿼리
 UPDATE session
-SET 
+SET
     current_act = $2,      -- new_act
     current_sequence = $3  -- new_sequence
 WHERE session_id = $1
@@ -153,11 +153,11 @@ RETURNING current_act, current_sequence;
 -- API: GET /state/session/{session_id}/progress
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     current_act,
     current_sequence,
     -- 진행률 계산 (예시: Act당 10개 Sequence 가정)
-    ROUND(((current_act - 1) * 10 + current_sequence)::numeric / 
+    ROUND(((current_act - 1) * 10 + current_sequence)::numeric /
           (3 * 10) * 100, 2) AS progress_percentage  -- 총 3개 Act 가정
 FROM session
 WHERE session_id = $1;
@@ -170,14 +170,14 @@ WHERE session_id = $1;
 -- 용도: UI 표시용 포맷팅
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     CONCAT('Act ', current_act, ' - Seq ', current_sequence) AS progress_display,
     CONCAT(current_act, '-', current_sequence) AS progress_code
 FROM session
 WHERE session_id = $1;
 
--- 결과 예: 
+-- 결과 예:
 -- progress_display: "Act 2 - Seq 3"
 -- progress_code: "2-3"
 
@@ -193,12 +193,12 @@ WHERE session_id = $1;
 -- --------------------------------------------------------------------
 
 -- 개념적 쿼리 (실제 조건은 비즈니스 로직에 따라 다름)
-SELECT 
+SELECT
     s.session_id,
     s.current_act,
     s.current_sequence,
     -- 예시: Turn이 10개 이상 진행되었으면 완료로 간주
-    CASE 
+    CASE
         WHEN s.current_turn >= 10 THEN true
         ELSE false
     END AS sequence_completed
@@ -213,12 +213,12 @@ WHERE s.session_id = $1;
 -- --------------------------------------------------------------------
 
 -- 개념적 쿼리
-SELECT 
+SELECT
     s.session_id,
     s.current_act,
     s.current_sequence,
     -- 예시: Sequence 5 이상이면 Act 완료로 간주
-    CASE 
+    CASE
         WHEN s.current_sequence >= 5 THEN true
         ELSE false
     END AS act_completed
@@ -231,18 +231,18 @@ WHERE s.session_id = $1;
 -- 용도: UI에서 "다음으로" 버튼 활성화 여부 결정
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.session_id,
     s.current_act,
     s.current_sequence,
     s.current_turn,
     -- Sequence 진행 가능 여부
-    CASE 
+    CASE
         WHEN s.current_turn >= 5 THEN true  -- 예: Turn 5개 이상 진행 필요
         ELSE false
     END AS can_advance_sequence,
     -- Act 진행 가능 여부
-    CASE 
+    CASE
         WHEN s.current_sequence >= 5 THEN true  -- 예: Sequence 5까지 완료 필요
         ELSE false
     END AS can_advance_act
@@ -262,7 +262,7 @@ WHERE s.session_id = $1;
 -- --------------------------------------------------------------------
 
 -- Turn History에서 Act/Sequence 변경 추출
-SELECT 
+SELECT
     turn_number,
     phase_at_turn,
     state_changes->>'current_act' AS new_act,
@@ -281,7 +281,7 @@ ORDER BY turn_number ASC;
 
 -- 개념적 쿼리 (Act 변경 로그가 있다고 가정)
 WITH act_changes AS (
-    SELECT 
+    SELECT
         (state_changes->>'current_act')::int AS act_number,
         created_at
     FROM turn_history
@@ -289,7 +289,7 @@ WITH act_changes AS (
       AND state_changes ? 'current_act'
     ORDER BY turn_number
 )
-SELECT 
+SELECT
     act_number,
     created_at AS act_started_at,
     LEAD(created_at) OVER (ORDER BY created_at) - created_at AS act_duration
@@ -303,7 +303,7 @@ FROM act_changes;
 
 -- 개념적 쿼리
 WITH sequence_changes AS (
-    SELECT 
+    SELECT
         (state_changes->>'current_act')::int AS act_number,
         (state_changes->>'current_sequence')::int AS sequence_number,
         created_at
@@ -312,7 +312,7 @@ WITH sequence_changes AS (
       AND state_changes ? 'current_sequence'
     ORDER BY turn_number
 )
-SELECT 
+SELECT
     act_number,
     sequence_number,
     created_at AS sequence_started_at,
@@ -329,7 +329,7 @@ FROM sequence_changes;
 -- 용도: 대시보드 - "각 Act별 진행 중인 세션 수"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     current_act,
     COUNT(*) AS session_count,
     AVG(current_sequence)::numeric(10,2) AS avg_sequence
@@ -351,7 +351,7 @@ ORDER BY current_act;
 -- 용도: 대시보드 - "특정 Act 내 Sequence별 분포"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     current_act,
     current_sequence,
     COUNT(*) AS session_count
@@ -368,7 +368,7 @@ ORDER BY current_sequence;
 -- --------------------------------------------------------------------
 
 -- 현재 진행 중인 세션 기준
-SELECT 
+SELECT
     current_act,
     current_sequence,
     AVG(current_turn)::numeric(10,2) AS avg_turns,
@@ -389,7 +389,7 @@ ORDER BY current_act, current_sequence;
 -- 용도: "Act 2에 있는 모든 세션"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -408,7 +408,7 @@ ORDER BY started_at DESC;
 -- 용도: "Act 2, Sequence 3에 있는 세션"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_phase,
@@ -426,7 +426,7 @@ ORDER BY started_at DESC;
 -- 용도: "Act 1-2 사이에 있는 세션"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -443,7 +443,7 @@ ORDER BY current_act, current_sequence, started_at DESC;
 -- 용도: "Act 1에서 오래 머물러 있는 세션"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -467,7 +467,7 @@ ORDER BY session_duration DESC;
 -- 용도: "각 Act에서 어떤 Phase를 많이 사용하나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.current_act,
     s.current_sequence,
     th.phase_at_turn,
@@ -484,7 +484,7 @@ ORDER BY s.current_act, s.current_sequence, turn_count DESC;
 -- 용도: "각 구간에서 Phase가 몇 번 바뀌나"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     s.current_act,
     s.current_sequence,
     COUNT(ph.history_id)::float / COUNT(DISTINCT s.session_id) AS avg_phase_transitions
@@ -501,7 +501,7 @@ ORDER BY s.current_act, s.current_sequence;
 -- --------------------------------------------------------------------
 
 -- 종료된 세션 기준
-SELECT 
+SELECT
     current_act,
     current_sequence,
     AVG(ended_at - started_at) AS avg_duration,
@@ -522,7 +522,7 @@ ORDER BY current_act, current_sequence;
 -- 예: Act는 1~3, Sequence는 1~10 범위
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -542,7 +542,7 @@ ORDER BY session_id;
 
 -- 이력 로그에서 확인 (Turn History 사용)
 WITH act_changes AS (
-    SELECT 
+    SELECT
         session_id,
         turn_number,
         (state_changes->>'current_act')::int AS new_act,
@@ -562,7 +562,7 @@ ORDER BY turn_number;
 -- 용도: "같은 구간에서 너무 오래 머무른 세션"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     session_id,
     scenario_id,
     current_act,
@@ -587,7 +587,7 @@ ORDER BY session_duration DESC;
 -- --------------------------------------------------------------------
 
 UPDATE session
-SET 
+SET
     current_act = 1,
     current_sequence = 1,
     current_turn = 0
@@ -608,7 +608,7 @@ CREATE OR REPLACE FUNCTION validate_act_sequence(
 RETURNS BOOLEAN AS $$
 BEGIN
     -- 예: Act는 1~3, Sequence는 1~10
-    RETURN p_act BETWEEN 1 AND 3 
+    RETURN p_act BETWEEN 1 AND 3
        AND p_sequence BETWEEN 1 AND 10;
 END;
 $$ LANGUAGE plpgsql;
@@ -631,12 +631,12 @@ BEGIN
     -- Sequence 증가
     PERFORM advance_sequence(test_session_id);
     RAISE NOTICE 'Sequence advanced';
-    
+
     -- 5번 반복 후 Act 증가
     FOR i IN 1..5 LOOP
         PERFORM advance_sequence(test_session_id);
     END LOOP;
-    
+
     PERFORM advance_act(test_session_id);
     RAISE NOTICE 'Act advanced';
 END $$;
@@ -644,4 +644,4 @@ END $$;
 
 -- ====================================================================
 -- 파일 끝
--- ====================================================================  
+-- ====================================================================

@@ -33,4 +33,3 @@ RETURNING
     name,
     scenario_id,
     created_at;
-

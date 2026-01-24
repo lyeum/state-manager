@@ -4,11 +4,11 @@
 -- 예: "현재 Sequence를 모두 완료했는가"
 -- --------------------------------------------------------------------
 
-SELECT 
+SELECT
     current_act,
     current_sequence,
     -- 예시: Sequence 5까지 완료해야 다음 Act로 진행 가능
-    CASE 
+    CASE
         WHEN current_sequence >= 5 THEN true
         ELSE false
     END AS can_advance_act
