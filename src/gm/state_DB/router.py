@@ -14,7 +14,6 @@ from .Query.query import (
     get_player_state,
     inventory_update,
     session_end,
-    # session_pause,  # TODO: 구현 예정
     session_start,
 )
 
@@ -96,7 +95,7 @@ async def end_session(session_id: Optional[int] = None):
         ) from e
 
 
-# TODO: 구현 예정
+# TODO: 구현 예정 - session_pause
 # @state_router.post(
 #     "/session/pause",
 #     response_model=WrappedResponse[SessionPauseResponse],
@@ -119,7 +118,7 @@ async def end_session(session_id: Optional[int] = None):
 #     except Exception as e:
 #         raise HTTPException(
 #             status_code=500, detail=f"세션 일시정지 중 오류 발생: {str(e)}"
-#         )
+#         ) from e
 
 
 # ====================================================================

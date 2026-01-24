@@ -17,7 +17,7 @@ AND NOT EXISTS (
 ON CONFLICT DO NOTHING;
 
 -- 2️⃣ PLAYER_INVENTORY 엣지 생성
-SELECT * FROM cypher('state_db_item_logic', format($$
+SELECT * FROM cypher('state_db', format($$
     MATCH (s:session)
     WHERE s.id = %L
     MATCH (p:player { session_id: s.id })

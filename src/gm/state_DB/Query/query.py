@@ -211,31 +211,255 @@ async def run_cypher_query(
 
 
 # ====================================================================
-# 세션 관리 함수들 (TODO: 구현 예정)
+# Node/Edge 테이블 생성
 # ====================================================================
 
-# async def session_start() -> Dict[str, Any]:
+
+# ====================================================================
+# 세션 관리 함수들
+# ====================================================================
+
+
+async def session_start() -> Dict[str, Any]:
+    """
+    게임 세션 시작
+    - 세션 정보 활성화
+    - 엔티티(player, npc, enemy) 생성
+    - 기본 edge(inventory, relation) 설정
+
+    Returns:
+        {
+            "session": [...],
+            "entities": [...],
+            "edges": [...]
+        }
+    """
+    # 세션 생성 쿼리
+    session_sql = BASE_DIR / "session/session_start.sql"
+    session_result = await run_sql_query(session_sql)
+
+    # 엔티티 생성 쿼리
+    entities_sql = BASE_DIR / "session/entities_init.sql"
+    entities_result = await run_sql_query(entities_sql)
+
+    # Edge 생성 쿼리
+    edges_sql = BASE_DIR / "session/edges_init.sql"
+    edges_result = await run_sql_query(edges_sql)
+
+    return {
+        "session": session_result,
+        "entities": entities_result,
+        "edges": edges_result,
+    }
+
+
+async def session_end(session_id: Optional[int] = None) -> Dict[str, str]:
+    """
+    게임 세션 종료
+
+    Args:
+        session_id: 종료할 세션 ID (None이면 현재 활성 세션)
+
+    Returns:
+        {"status": "success", "message": "Session ended"}
+    """
+    session_end_sql = BASE_DIR / "session/session_end.sql"
+
+    params = {"session_id": session_id} if session_id else None
+    await run_sql_command(session_end_sql, params)
+
+    message = f"Session {session_id} ended" if session_id else "Active session ended"
+
+    return {"status": "success", "message": message}
+
+
+# TODO: 구현 예정
+# async def session_pause(session_id: Optional[int] = None) -> Dict[str, Any]:
 #     """
-#     게임 세션 시작
-#     - 세션 정보 활성화
-#     - 엔티티(player, npc, enemy) 생성
-#     - 기본 edge(inventory, relation) 설정
+#     게임 세션 일시정지 (스냅샷 저장)
+#
+#     Args:
+#         session_id: 일시정지할 세션 ID
 #
 #     Returns:
-#         {"session": {...}, "entities": [...], "edges": [...]}
+#         {"snapshot_id": ..., "timestamp": ...}
 #     """
-#     # TODO: SQL 파일 분리 및 파라미터 형식 통일 필요
-#     pass
-
-
-# async def session_end(session_id: Optional[int] = None) -> Dict[str, str]:
-#     """게임 세션 종료"""
-#     # TODO: session_end.sql 파일 필요
 #     pass
 
 
 # ====================================================================
-# 아이템 로직 (state_db_item_logic) - 구현됨
+# 인벤토리 조회
+# ====================================================================
+
+
+async def get_session_inventory(session_id: str) -> List[Dict[str, Any]]:
+    """
+    세션의 플레이어 인벤토리 조회
+
+    Args:
+        session_id: 세션 ID
+
+    Returns:
+        [
+            {
+                "player_id": "uuid",
+                "item_id": 1,
+                "quantity": 3,
+                "acquired_at": "2026-01-23 10:00:00"
+            },
+            ...
+        ]
+    """
+    sql_path = Path(__file__).parent / "Query/INQUIRY/Session_inventory.sql"
+    return await run_sql_query(sql_path, {"session_id": session_id})
+
+
+# ====================================================================
+# NPC 조회
+# ====================================================================
+
+
+async def get_session_npcs(session_id: str) -> List[Dict[str, Any]]:
+    """
+    세션의 NPC 목록 조회
+
+    Args:
+        session_id: 세션 ID
+
+    Returns:
+        NPC 정보 리스트
+    """
+    sql_path = Path(__file__).parent / "Query/INQUIRY/Session_npc.sql"
+    return await run_sql_query(sql_path, {"session_id": session_id})
+
+
+async def get_npc_relations(player_id: str) -> List[Dict[str, Any]]:
+    """
+    특정 플레이어의 NPC 호감도 조회
+
+    Args:
+        player_id: 플레이어 ID
+
+    Returns:
+        [
+            {
+                "npc_id": "uuid",
+                "npc_name": "Merchant Tom",
+                "affinity_score": 75
+            },
+            ...
+        ]
+    """
+    sql_path = Path(__file__).parent / "Query/INQUIRY/Npc_relations.sql"
+    return await run_sql_query(sql_path, {"player_id": player_id})
+
+
+# ====================================================================
+# Enemy 조회
+# ====================================================================
+
+
+async def get_session_enemies(
+    session_id: str, active_only: bool = True
+) -> List[Dict[str, Any]]:
+    """
+    세션의 Enemy 목록 조회
+
+    Args:
+        session_id: 세션 ID
+        active_only: True면 생존한 적만, False면 전체
+
+    Returns:
+        Enemy 정보 리스트
+    """
+    sql_path = Path(__file__).parent / "Query/INQUIRY/Session_enemy.sql"
+    return await run_sql_query(
+        sql_path, {"session_id": session_id, "active_only": active_only}
+    )
+
+
+async def get_player_stats(player_id: str) -> Dict[str, Any]:
+    """
+    플레이어 상세 스탯 조회
+
+    Args:
+        player_id: 플레이어 ID
+
+    Returns:
+        {
+            "player_id": "uuid",
+            "name": "Hero",
+            "state": {
+                "numeric": {"HP": 85, "MP": 50, ...},
+                "boolean": {}
+            }
+        }
+    """
+    sql_path = Path(__file__).parent / "Query/INQUIRY/Player_stats.sql"
+    result = await run_sql_query(sql_path, {"player_id": player_id})
+    return result[0] if result else {}
+
+
+# ====================================================================
+# 플레이어 상태 조회
+# ====================================================================
+
+
+async def get_player_state(player_id: str) -> Dict[str, Any]:
+    """
+    플레이어 전체 상태 조회 (요구사항 스펙)
+
+    Args:
+        player_id: 조회할 플레이어 ID
+
+    Returns:
+        {
+            "player": {
+                "hp": 7,
+                "gold": 339,
+                "items": [1, 3, 5, 7]
+            },
+            "player_npc_relations": [
+                {"npc_id": 7, "affinity_score": 75}
+            ]
+        }
+    """
+    # 플레이어 기본 정보 조회
+    player_sql = BASE_DIR / "node/entity/player/player_state.sql"
+    player_result = await run_sql_query(player_sql, {"player_id": player_id})
+
+    # NPC 관계 조회
+    npc_relation_sql = BASE_DIR / "edge/RELATION/player_npc/player_npc_relations.sql"
+    npc_relations = await run_sql_query(npc_relation_sql, {"player_id": player_id})
+
+    # 결과가 없으면 기본값 반환 (router에서 404 처리)
+    if not player_result:
+        return {
+            "player": {"hp": 0, "gold": 0, "items": []},
+            "player_npc_relations": [],
+        }
+
+    # 플레이어 데이터 가공
+    player_data = player_result[0]
+
+    return {
+        "player": {
+            "hp": player_data.get("hp", 0),
+            "gold": player_data.get("gold", 0),
+            "items": player_data.get("items", []),  # 배열로 반환되어야 함
+        },
+        "player_npc_relations": [
+            {
+                "npc_id": relation["npc_id"],
+                "affinity_score": relation["affinity_score"],
+            }
+            for relation in npc_relations
+        ],
+    }
+
+
+# ====================================================================
+# 아이템 로직 (state_db_item_logic)
 # ====================================================================
 
 
@@ -249,7 +473,7 @@ async def get_item_info(item_id: Optional[int] = None) -> List[Dict[str, Any]]:
     Returns:
         아이템 정보 리스트
     """
-    item_sql = BASE_DIR / "node/asset/item/item_Querry.sql"
+    item_sql = BASE_DIR / "node/asset/item/item_Query.sql"
 
     params = {"item_id": item_id} if item_id else None
     items = await run_sql_query(item_sql, params)
@@ -287,15 +511,294 @@ async def inventory_update(
 
 
 # ====================================================================
-# 플레이어 상태 조회 (TODO: 구현 예정 - SQL 파일 분리 필요)
+# 플레이어 상태 업데이트
 # ====================================================================
 
-# async def get_player_state(player_id: str) -> Dict[str, Any]:
-#     """
-#     플레이어 전체 상태 조회 (요구사항 스펙)
-#     """
-#     # TODO: player_Query.sql이 여러 쿼리를 포함하므로 분리 필요
-#     pass
+
+async def update_player_hp(
+    player_id: str, session_id: str, hp_change: int, reason: str = "unknown"
+) -> Dict[str, Any]:
+    """
+    플레이어 HP 변경
+
+    Args:
+        player_id: 플레이어 ID
+        session_id: 세션 ID
+        hp_change: HP 변화량 (양수: 회복, 음수: 피해)
+        reason: 변경 사유 (combat, item, rest 등)
+
+    Returns:
+        {
+            "player_id": "uuid",
+            "current_hp": 75,
+            "max_hp": 100,
+            "changed_by": -25
+        }
+    """
+    sql_path = Path(__file__).parent / "Query/UPDATE/update_player_hp.sql"
+    params = {"player_id": player_id, "session_id": session_id, "hp_change": hp_change}
+    result = await run_sql_query(sql_path, params)
+
+    if result:
+        return result[0]
+    else:
+        # 변경 후 현재 HP 조회
+        player_result = await get_player_stats(player_id)
+        return {
+            "player_id": player_id,
+            "current_hp": player_result.get("state", {})
+            .get("numeric", {})
+            .get("HP", 0),
+            "max_hp": player_result.get("state", {})
+            .get("numeric", {})
+            .get("max_hp", 100),
+            "changed_by": hp_change,
+        }
+
+
+async def update_player_stats(
+    player_id: str, session_id: str, stat_changes: Dict[str, int]
+) -> Dict[str, Any]:
+    """
+    플레이어 스탯 변경 (범용)
+
+    Args:
+        player_id: 플레이어 ID
+        session_id: 세션 ID
+        stat_changes: 변경할 스탯들 {"HP": -10, "MP": 5, "STR": 1}
+
+    Returns:
+        업데이트된 플레이어 상태
+    """
+    sql_path = Path(__file__).parent / "Query/UPDATE/update_player_stats.sql"
+    params = {
+        "player_id": player_id,
+        "session_id": session_id,
+        "stat_changes": stat_changes,
+    }
+    await run_sql_command(sql_path, params)
+    return await get_player_stats(player_id)
+
+
+# ====================================================================
+# NPC 상태 업데이트
+# ====================================================================
+
+
+async def update_npc_affinity(
+    player_id: str, npc_id: str, affinity_change: int
+) -> Dict[str, Any]:
+    """
+    NPC 호감도 변경
+
+    Args:
+        player_id: 플레이어 ID
+        npc_id: NPC ID
+        affinity_change: 호감도 변화량 (양수/음수)
+
+    Returns:
+        {
+            "player_id": "uuid",
+            "npc_id": "uuid",
+            "new_affinity": 80
+        }
+    """
+    sql_path = Path(__file__).parent / "Query/UPDATE/update_npc_affinity.sql"
+    params = {
+        "player_id": player_id,
+        "npc_id": npc_id,
+        "affinity_change": affinity_change,
+    }
+    result = await run_sql_query(sql_path, params)
+
+    if result:
+        return {
+            "player_id": player_id,
+            "npc_id": npc_id,
+            "new_affinity": result[0].get("new_affinity", 0),
+        }
+    else:
+        return {"player_id": player_id, "npc_id": npc_id, "new_affinity": 0}
+
+
+# ====================================================================
+# Enemy 상태 업데이트
+# ====================================================================
+
+
+async def update_enemy_hp(
+    enemy_instance_id: str, session_id: str, hp_change: int
+) -> Dict[str, Any]:
+    """
+    적 HP 변경
+
+    Args:
+        enemy_instance_id: 적 인스턴스 ID
+        session_id: 세션 ID
+        hp_change: HP 변화량 (보통 음수)
+
+    Returns:
+        {
+            "enemy_instance_id": "uuid",
+            "current_hp": 15,
+            "is_defeated": false
+        }
+    """
+    sql_path = Path(__file__).parent / "Query/UPDATE/update_enemy_hp.sql"
+    params = {
+        "enemy_instance_id": enemy_instance_id,
+        "session_id": session_id,
+        "hp_change": hp_change,
+    }
+    result = await run_sql_query(sql_path, params)
+    return result[0] if result else {}
+
+
+async def defeat_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str]:
+    """
+    적 처치 처리
+
+    Args:
+        enemy_instance_id: 적 인스턴스 ID
+        session_id: 세션 ID
+
+    Returns:
+        {"status": "defeated", "enemy_id": "uuid"}
+    """
+    sql_path = Path(__file__).parent / "Query/UPDATE/defeated_enemy.sql"
+    params = {"enemy_instance_id": enemy_instance_id, "session_id": session_id}
+    await run_sql_command(sql_path, params)
+
+    return {"status": "defeated", "enemy_id": enemy_instance_id}
+
+
+# ====================================================================
+# 위치 업데이트
+# ====================================================================
+
+
+async def update_location(session_id: str, new_location: str) -> Dict[str, str]:
+    """
+    세션 위치 변경
+
+    Args:
+        session_id: 세션 ID
+        new_location: 새 위치 이름
+
+    Returns:
+        {"session_id": "uuid", "location": "Dark Forest"}
+    """
+    sql_path = Path(__file__).parent / "Query/UPDATE/update_location.sql"
+    params = {"session_id": session_id, "new_location": new_location}
+    await run_sql_command(sql_path, params)
+
+    return {"session_id": session_id, "location": new_location}
+
+
+# ====================================================================
+# Enemy 관리
+# ====================================================================
+
+
+async def spawn_enemy(session_id: str, enemy_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    적 동적 생성
+
+    Args:
+        session_id: 세션 ID
+        enemy_data: {
+            "enemy_id": 1,
+            "name": "Goblin Warrior",
+            "hp": 30,
+            "attack": 10,
+            "defense": 5
+        }
+
+    Returns:
+        생성된 적 정보 (enemy_instance_id 포함)
+    """
+    sql_path = Path(__file__).parent / "Query/MANAGE/enemy/spawn_enemy.sql"
+    params = {
+        "session_id": session_id,
+        "enemy_id": enemy_data.get("enemy_id"),
+        "name": enemy_data.get("name"),
+        "description": enemy_data.get("description", ""),
+        "hp": enemy_data.get("hp", 30),
+        "attack": enemy_data.get("attack", 10),
+        "defense": enemy_data.get("defense", 5),
+        "tags": enemy_data.get("tags", ["enemy"]),
+    }
+    result = await run_sql_query(sql_path, params)
+    return result[0] if result else {}
+
+
+async def remove_enemy(enemy_instance_id: str, session_id: str) -> Dict[str, str]:
+    """
+    적 제거 (물리적 삭제)
+
+    Args:
+        enemy_instance_id: 적 인스턴스 ID
+        session_id: 세션 ID
+
+    Returns:
+        {"status": "removed"}
+    """
+    sql_path = Path(__file__).parent / "Query/MANAGE/enemy/remove_enemy.sql"
+    params = {"enemy_instance_id": enemy_instance_id, "session_id": session_id}
+    await run_sql_command(sql_path, params)
+
+    return {"status": "removed"}
+
+
+# ====================================================================
+# NPC 관리
+# ====================================================================
+
+
+async def spawn_npc(session_id: str, npc_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    NPC 동적 생성
+
+    Args:
+        session_id: 세션 ID
+        npc_data: {
+            "npc_id": 1,
+            "name": "Merchant Tom",
+            "description": "A friendly merchant"
+        }
+
+    Returns:
+        생성된 NPC 정보
+    """
+    sql_path = Path(__file__).parent / "Query/MANAGE/npc/spawn_npc.sql"
+    params = {
+        "session_id": session_id,
+        "npc_id": npc_data.get("npc_id"),
+        "name": npc_data.get("name"),
+        "description": npc_data.get("description", ""),
+        "hp": npc_data.get("hp", 100),
+        "tags": npc_data.get("tags", ["npc"]),
+    }
+    result = await run_sql_query(sql_path, params)
+    return result[0] if result else {}
+
+
+async def remove_npc(npc_instance_id: str, session_id: str) -> Dict[str, str]:
+    """
+    NPC 제거
+
+    Args:
+        npc_instance_id: NPC 인스턴스 ID
+        session_id: 세션 ID
+
+    Returns:
+        {"status": "removed"}
+    """
+    sql_path = Path(__file__).parent / "Query/MANAGE/npc/remove_npc.sql"
+    params = {"npc_instance_id": npc_instance_id, "session_id": session_id}
+    await run_sql_command(sql_path, params)
+
+    return {"status": "removed"}
 
 
 # ====================================================================
@@ -350,7 +853,7 @@ async def get_subgraph(
         depth: 탐색 깊이
 
     Returns:
-        {"nodes": [...], "edges": [...]}
+        {"paths": [...]}
     """
     # 노드와 연결된 엣지 조회
     cypher = f"""

@@ -43,6 +43,29 @@ FROM cypher('state_db_item_logic', $$
     r.updated_at = now()
 $$) AS (v agtype);
 
+
+BEGIN;
+
+-- 1. 인벤토리에 아이템 추가 (또는 수량 증가)
+INSERT INTO player_inventory (player_id, item_id, quantity)
+VALUES ('player_uuid', 5, 1)
+ON CONFLICT (player_id, item_id)
+DO UPDATE SET quantity = player_inventory.quantity + 1;
+
+-- 2. Turn 증가
+SELECT advance_turn('session_uuid');
+
+-- 3. Turn 상태 변경 기록
+SELECT update_turn_state_changes(
+    'session_uuid',
+    (SELECT current_turn FROM session WHERE session_id = 'session_uuid'),
+    '{"inventory_added": [5], "quantity": 1}'::jsonb,
+    'earn_item'
+);
+
+COMMIT;
+
+
 -- 2️⃣ 획득 메시지 생성 (선택적)
 SELECT *
 FROM cypher('state_db_item_logic', $$
@@ -90,6 +113,29 @@ FROM cypher('state_db_item_logic', $$
       success: true
     }]->(it)
 $$) AS (v agtype);
+
+
+BEGIN;
+
+-- 1. 인벤토리에 아이템 추가 (또는 수량 증가)
+INSERT INTO player_inventory (player_id, item_id, quantity)
+VALUES ('player_uuid', 5, 1)
+ON CONFLICT (player_id, item_id)
+DO UPDATE SET quantity = player_inventory.quantity - 1;
+
+-- 2. Turn 증가
+SELECT advance_turn('session_uuid');
+
+-- 3. Turn 상태 변경 기록
+SELECT update_turn_state_changes(
+    'session_uuid',
+    (SELECT current_turn FROM session WHERE session_id = 'session_uuid'),
+    '{"inventory_lost": [5], "quantity": 1}'::jsonb,
+    'use_item'
+);
+
+COMMIT;
+
 
 -- 3️⃣ 사용 메시지 생성 (선택적)
 SELECT *
