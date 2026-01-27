@@ -494,7 +494,9 @@ async def session_start(
     try:
         scenario_uuid = UUID(scenario_id)
     except (ValueError, AttributeError) as e:
-        raise HTTPException(status_code=400, detail=f"Invalid scenario_id format: {scenario_id}") from e
+        raise HTTPException(
+            status_code=400, detail=f"Invalid scenario_id format: {scenario_id}"
+        ) from e
 
     # create_session 함수 호출
     result = await execute_sql_function(
