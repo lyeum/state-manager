@@ -8,22 +8,13 @@ from state_db.configs.setting import (
     APP_ENV,
     APP_HOST,
     APP_PORT,
-    BE_ROUTER_PORT,
-    CORS_ORIGINS,
     DB_CONFIG,
     DB_HOST,
     DB_NAME,
     DB_PASSWORD,
     DB_PORT,
     DB_USER,
-    GM_PORT,
-    LLM_ROUTER_PORT,
     REDIS_PORT,
-    REMOTE_HOST,
-    RULE_PORT,
-    SCENARIO_PORT,
-    STATE_PORT,
-    WEB_PORT,
 )
 
 __all__ = [
@@ -35,15 +26,7 @@ __all__ = [
     "APP_ENV",
     "APP_HOST",
     "APP_PORT",
-    "REMOTE_HOST",
     # Ports
-    "BE_ROUTER_PORT",
-    "GM_PORT",
-    "STATE_PORT",
-    "SCENARIO_PORT",
-    "RULE_PORT",
-    "LLM_ROUTER_PORT",
-    "WEB_PORT",
     "REDIS_PORT",
     # Database
     "DB_USER",
@@ -54,6 +37,4 @@ __all__ = [
     "DB_CONFIG",
     # Apache AGE
     "AGE_GRAPH_NAME",
-    # CORS
-    "CORS_ORIGINS",
 ]
