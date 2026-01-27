@@ -132,11 +132,11 @@ async def health_check() -> Dict[str, str]:
 @app.get("/health/db", description="DB 연결 상태 확인", summary="DB 헬스체크")
 async def db_health_check() -> Dict[str, Any]:
     """데이터베이스 연결 상태를 실시간으로 확인합니다."""
-    from state_db.infrastructure import run_sql_query
+    from state_db.infrastructure import run_raw_query
 
     try:
         # 매우 가벼운 쿼리로 연결 확인
-        await run_sql_query("SELECT 1")
+        await run_raw_query("SELECT 1")
         return {
             "status": "healthy",
             "database": "connected",
