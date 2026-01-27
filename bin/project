@@ -25,8 +25,17 @@ case "$COMMAND" in
         act pull_request -W .github/workflows/ci-dev.yml --container-architecture linux/amd64
         docker context use default
         ;;
+    run)
+        echo "Starting State Manager (uvicorn)..."
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+        uv run python src/state_db/main.py
+        ;;
+    run-compose)
+        echo "Starting services with Docker Compose (dev)..."
+        docker compose -f docker-compose.dev.yml up --build -d
+        ;;
     *)
-        echo "Usage: project {lint|ci-dev}"
+        echo "Usage: project {lint|pre-commit|ci-dev|run|run-compose}"
         exit 1
         ;;
 esac
