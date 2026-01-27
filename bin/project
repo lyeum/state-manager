@@ -32,7 +32,7 @@ case "$COMMAND" in
         ;;
     run-compose)
         echo "Starting services with Docker Compose (dev)..."
-        docker compose -f docker-compose.dev.yml up -d
+        docker compose -f docker-compose.dev.yml up --build -d
         ;;
     *)
         echo "Usage: project {lint|pre-commit|ci-dev|run|run-compose}"
