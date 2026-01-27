@@ -1,4 +1,3 @@
-# src/gm/state_db/main.py
 # GTRPGM 상태 관리 FastAPI 서버
 
 import logging
@@ -6,14 +5,12 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict
 
 from fastapi import FastAPI, HTTPException, Request
-from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
 # [수정] 최상단에서 Query와 API_ROUTERS 임포트를 제거했습니다.
 from state_db.configs import (
     APP_ENV,
     APP_PORT,
-    CORS_ORIGINS,
     LOGGING_CONFIG,
 )
 from state_db.configs.exceptions import init_exception_handlers
@@ -29,14 +26,12 @@ logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """서버 생명주기 관리: 함수 내부에서 임포트하여 순환 참조 방지"""
-    # [수정] 실행 시점에 필요한 함수만 임포트
-    from state_db.Query import shutdown as db_shutdown
-    from state_db.Query import startup as db_startup
+    """서버 생명주기 관리"""
+    from state_db.infrastructure import shutdown, startup
 
-    await db_startup()
+    await startup()
     yield
-    await db_shutdown()
+    await shutdown()
 
 
 # ====================================================================
@@ -66,14 +61,6 @@ async def error_logging_middleware(request: Request, call_next):
 
 init_exception_handlers(app)
 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ====================================================================
 # HTTPException 전용 핸들러
