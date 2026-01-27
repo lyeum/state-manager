@@ -10,7 +10,6 @@ from starlette.middleware.cors import CORSMiddleware
 from state_db.configs import (
     API_ROUTERS,
     APP_ENV,
-    APP_HOST,
     APP_PORT,
     CORS_ORIGINS,
     LOGGING_CONFIG,
