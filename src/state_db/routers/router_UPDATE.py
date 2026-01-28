@@ -5,7 +5,11 @@ from typing import Annotated, Any, Dict
 from fastapi import APIRouter, Depends
 
 from state_db.custom import WrappedResponse
-from state_db.models import EnemyHPUpdateResult, NPCAffinityUpdateResult, PlayerHPUpdateResult
+from state_db.models import (
+    EnemyHPUpdateResult,
+    NPCAffinityUpdateResult,
+    PlayerHPUpdateResult,
+)
 from state_db.repositories import EntityRepository, PlayerRepository, SessionRepository
 from state_db.schemas import (
     EnemyHPUpdateRequest,
@@ -73,9 +77,7 @@ async def update_inventory(
 # ====================================================================
 
 
-@router.put(
-    "/npc/affinity", response_model=WrappedResponse[NPCAffinityUpdateResult]
-)
+@router.put("/npc/affinity", response_model=WrappedResponse[NPCAffinityUpdateResult])
 async def update_npc_affinity_endpoint(
     request: NPCAffinityUpdateRequest,
     repo: Annotated[PlayerRepository, Depends(get_player_repo)],
@@ -126,7 +128,9 @@ async def update_enemy_hp_endpoint(
     return {"status": "success", "data": result}
 
 
-@router.post("/enemy/{enemy_instance_id}/defeat", response_model=WrappedResponse[Dict[str, str]])
+@router.post(
+    "/enemy/{enemy_instance_id}/defeat", response_model=WrappedResponse[Dict[str, str]]
+)
 async def defeat_enemy_endpoint(
     enemy_instance_id: str,
     session_id: str,

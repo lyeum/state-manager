@@ -181,3 +181,158 @@ async def test_get_turn(async_client: AsyncClient):
         data = response.json()
         assert data["status"] == "success"
         assert data["data"]["current_turn"] == 5
+
+
+@pytest.mark.asyncio
+async def test_get_all_sessions(async_client: AsyncClient):
+    mock_sessions = [
+        {
+            "session_id": MOCK_SESSION_ID,
+            "scenario_id": MOCK_SCENARIO_ID,
+            "player_id": MOCK_PLAYER_ID,
+            "current_act": 1,
+            "current_sequence": 1,
+            "status": "active",
+        },
+        {
+            "session_id": "test-session-id-2",
+            "scenario_id": MOCK_SCENARIO_ID,
+            "player_id": MOCK_PLAYER_ID,
+            "current_act": 2,
+            "current_sequence": 3,
+            "status": "paused",
+        },
+    ]
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_all_sessions",
+        new=AsyncMock(return_value=mock_sessions),
+    ):
+        response = await async_client.get("/state/sessions")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert len(data["data"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_paused_sessions(async_client: AsyncClient):
+    mock_sessions = [
+        {
+            "session_id": MOCK_SESSION_ID,
+            "scenario_id": MOCK_SCENARIO_ID,
+            "player_id": MOCK_PLAYER_ID,
+            "current_act": 1,
+            "current_sequence": 1,
+            "status": "paused",
+        }
+    ]
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_paused_sessions",
+        new=AsyncMock(return_value=mock_sessions),
+    ):
+        response = await async_client.get("/state/sessions/paused")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert len(data["data"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_ended_sessions(async_client: AsyncClient):
+    mock_sessions = [
+        {
+            "session_id": MOCK_SESSION_ID,
+            "scenario_id": MOCK_SCENARIO_ID,
+            "player_id": MOCK_PLAYER_ID,
+            "current_act": 3,
+            "current_sequence": 10,
+            "status": "ended",
+        }
+    ]
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_ended_sessions",
+        new=AsyncMock(return_value=mock_sessions),
+    ):
+        response = await async_client.get("/state/sessions/ended")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert len(data["data"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_act(async_client: AsyncClient):
+    mock_act = {"session_id": MOCK_SESSION_ID, "current_act": 2}
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_act",
+        new=AsyncMock(return_value=mock_act),
+    ):
+        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/act")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_act"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_sequence(async_client: AsyncClient):
+    mock_sequence = {"session_id": MOCK_SESSION_ID, "current_sequence": 5}
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_sequence",
+        new=AsyncMock(return_value=mock_sequence),
+    ):
+        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/sequence")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_sequence"] == 5
+
+
+@pytest.mark.asyncio
+async def test_get_location(async_client: AsyncClient):
+    mock_location = {"session_id": MOCK_SESSION_ID, "location": "Dark Forest"}
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_location",
+        new=AsyncMock(return_value=mock_location),
+    ):
+        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/location")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["location"] == "Dark Forest"
+
+
+@pytest.mark.asyncio
+async def test_get_progress(async_client: AsyncClient):
+    mock_progress = {
+        "session_id": MOCK_SESSION_ID,
+        "current_act": 2,
+        "current_sequence": 5,
+        "current_turn": 15,
+        "current_phase": "exploration",
+        "location": "Dark Forest",
+        "progress_percentage": 50.0,
+    }
+
+    with patch(
+        "state_db.repositories.SessionRepository.get_progress",
+        new=AsyncMock(return_value=mock_progress),
+    ):
+        response = await async_client.get(f"/state/session/{MOCK_SESSION_ID}/progress")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["progress_percentage"] == 50.0

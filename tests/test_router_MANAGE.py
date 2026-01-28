@@ -174,9 +174,7 @@ async def test_add_turn(async_client: AsyncClient):
         "state_db.repositories.SessionRepository.add_turn",
         new=AsyncMock(return_value=mock_response),
     ) as mock_add:
-        response = await async_client.post(
-            f"/state/session/{MOCK_SESSION_ID}/turn/add"
-        )
+        response = await async_client.post(f"/state/session/{MOCK_SESSION_ID}/turn/add")
 
         assert response.status_code == 200
         data = response.json()
@@ -230,3 +228,89 @@ async def test_change_sequence(async_client: AsyncClient):
         assert data["status"] == "success"
         assert data["data"]["current_sequence"] == 4
         mock_change.assert_called_once_with(MOCK_SESSION_ID, 4)
+
+
+@pytest.mark.asyncio
+async def test_add_act(async_client: AsyncClient):
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_act": 3,
+        "current_phase": "exploration",
+    }
+
+    with patch(
+        "state_db.repositories.SessionRepository.add_act",
+        new=AsyncMock(return_value=mock_response),
+    ) as mock_add:
+        response = await async_client.post(f"/state/session/{MOCK_SESSION_ID}/act/add")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_act"] == 3
+        mock_add.assert_called_once_with(MOCK_SESSION_ID)
+
+
+@pytest.mark.asyncio
+async def test_back_act(async_client: AsyncClient):
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_act": 1,
+        "current_phase": "exploration",
+    }
+
+    with patch(
+        "state_db.repositories.SessionRepository.back_act",
+        new=AsyncMock(return_value=mock_response),
+    ) as mock_back:
+        response = await async_client.post(f"/state/session/{MOCK_SESSION_ID}/act/back")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_act"] == 1
+        mock_back.assert_called_once_with(MOCK_SESSION_ID)
+
+
+@pytest.mark.asyncio
+async def test_add_sequence(async_client: AsyncClient):
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_sequence": 6,
+    }
+
+    with patch(
+        "state_db.repositories.SessionRepository.add_sequence",
+        new=AsyncMock(return_value=mock_response),
+    ) as mock_add:
+        response = await async_client.post(
+            f"/state/session/{MOCK_SESSION_ID}/sequence/add"
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_sequence"] == 6
+        mock_add.assert_called_once_with(MOCK_SESSION_ID)
+
+
+@pytest.mark.asyncio
+async def test_back_sequence(async_client: AsyncClient):
+    mock_response = {
+        "session_id": MOCK_SESSION_ID,
+        "current_sequence": 3,
+    }
+
+    with patch(
+        "state_db.repositories.SessionRepository.back_sequence",
+        new=AsyncMock(return_value=mock_response),
+    ) as mock_back:
+        response = await async_client.post(
+            f"/state/session/{MOCK_SESSION_ID}/sequence/back"
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_sequence"] == 3
+        mock_back.assert_called_once_with(MOCK_SESSION_ID)

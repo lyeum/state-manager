@@ -71,9 +71,7 @@ async def get_session(
 # ====================================================================
 
 
-@router.get(
-    "/player/{player_id}", response_model=WrappedResponse[FullPlayerState]
-)
+@router.get("/player/{player_id}", response_model=WrappedResponse[FullPlayerState])
 async def get_player(
     player_id: str, repo: Annotated[PlayerRepository, Depends(get_player_repo)]
 ) -> Dict[str, Any]:
@@ -97,9 +95,7 @@ async def get_inventory(
 # ====================================================================
 
 
-@router.get(
-    "/session/{session_id}/npcs", response_model=WrappedResponse[List[NPCInfo]]
-)
+@router.get("/session/{session_id}/npcs", response_model=WrappedResponse[List[NPCInfo]])
 async def get_npcs(
     session_id: str, repo: Annotated[EntityRepository, Depends(get_entity_repo)]
 ) -> Dict[str, Any]:
@@ -134,9 +130,7 @@ async def get_phase(
     return {"status": "success", "data": result}
 
 
-@router.get(
-    "/session/{session_id}/turn", response_model=WrappedResponse[TurnAddResult]
-)
+@router.get("/session/{session_id}/turn", response_model=WrappedResponse[TurnAddResult])
 async def get_turn(
     session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
 ) -> Dict[str, Any]:

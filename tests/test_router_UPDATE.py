@@ -62,7 +62,11 @@ async def test_update_player_stats(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_update_inventory(async_client: AsyncClient):
-    mock_response = {"player_id": MOCK_PLAYER_ID, "item_id": MOCK_ITEM_ID, "quantity": 5}
+    mock_response = {
+        "player_id": MOCK_PLAYER_ID,
+        "item_id": MOCK_ITEM_ID,
+        "quantity": 5,
+    }
 
     with patch(
         "state_db.repositories.PlayerRepository.update_inventory",
@@ -122,3 +126,108 @@ async def test_update_location(async_client: AsyncClient):
         assert data["status"] == "success"
         assert data["data"]["location"] == "Dark Forest"
         mock_update.assert_called_once_with(MOCK_SESSION_ID, "Dark Forest")
+
+
+# Mock data for new tests
+MOCK_ENEMY_ID = "test-enemy-id"
+
+
+@pytest.mark.asyncio
+async def test_update_enemy_hp(async_client: AsyncClient):
+    mock_response = {
+        "enemy_instance_id": MOCK_ENEMY_ID,
+        "name": "Goblin",
+        "current_hp": 40,
+        "max_hp": 50,
+        "hp_change": -10,
+    }
+
+    with patch(
+        "state_db.repositories.EntityRepository.update_enemy_hp",
+        new=AsyncMock(return_value=mock_response),
+    ):
+        response = await async_client.put(
+            f"/state/enemy/{MOCK_ENEMY_ID}/hp",
+            json={"session_id": MOCK_SESSION_ID, "hp_change": -10},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["current_hp"] == 40
+
+
+@pytest.mark.asyncio
+async def test_defeat_enemy(async_client: AsyncClient):
+    with patch(
+        "state_db.repositories.EntityRepository.defeat_enemy",
+        new=AsyncMock(),
+    ) as mock_defeat:
+        response = await async_client.post(
+            f"/state/enemy/{MOCK_ENEMY_ID}/defeat?session_id={MOCK_SESSION_ID}"
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["enemy_instance_id"] == MOCK_ENEMY_ID
+        assert data["data"]["status"] == "defeated"
+        mock_defeat.assert_called_once_with(MOCK_SESSION_ID, MOCK_ENEMY_ID)
+
+
+@pytest.mark.asyncio
+async def test_earn_item(async_client: AsyncClient):
+    mock_response = {
+        "player_id": MOCK_PLAYER_ID,
+        "item_id": MOCK_ITEM_ID,
+        "quantity": 3,
+        "total_quantity": 8,
+    }
+
+    with patch(
+        "state_db.repositories.PlayerRepository.earn_item",
+        new=AsyncMock(return_value=mock_response),
+    ):
+        response = await async_client.post(
+            "/state/player/item/earn",
+            json={
+                "session_id": MOCK_SESSION_ID,
+                "player_id": MOCK_PLAYER_ID,
+                "item_id": MOCK_ITEM_ID,
+                "quantity": 3,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["quantity"] == 3
+
+
+@pytest.mark.asyncio
+async def test_use_item(async_client: AsyncClient):
+    mock_response = {
+        "player_id": MOCK_PLAYER_ID,
+        "item_id": MOCK_ITEM_ID,
+        "quantity": 1,
+        "remaining_quantity": 7,
+    }
+
+    with patch(
+        "state_db.repositories.PlayerRepository.use_item",
+        new=AsyncMock(return_value=mock_response),
+    ):
+        response = await async_client.post(
+            "/state/player/item/use",
+            json={
+                "session_id": MOCK_SESSION_ID,
+                "player_id": MOCK_PLAYER_ID,
+                "item_id": MOCK_ITEM_ID,
+                "quantity": 1,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["data"]["quantity"] == 1
