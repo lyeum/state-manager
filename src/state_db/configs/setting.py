@@ -13,7 +13,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
 DB_HOST = os.getenv("DB_HOST")
-DB_PORT = int(os.getenv("DB_PORT", 5432))
+DB_PORT = int(os.getenv("DB_PORT", 8621))
 
 # Apache AGE 그래프 설정
 AGE_GRAPH_NAME = os.getenv("AGE_GRAPH_NAME", "state_db")

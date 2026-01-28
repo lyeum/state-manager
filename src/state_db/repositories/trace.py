@@ -67,9 +67,7 @@ class TraceRepository(BaseRepository):
         results = await run_sql_query(sql_path, [session_id])
         return list(results) if results else []
 
-    async def get_turn_duration_analysis(
-        self, session_id: str
-    ) -> List[Dict[str, Any]]:
+    async def get_turn_duration_analysis(self, session_id: str) -> List[Dict[str, Any]]:
         """각 Turn의 소요 시간 계산 및 분석"""
         sql_path = self.query_dir / "TRACE" / "turn" / "get_duration_analysis.sql"
         results = await run_sql_query(sql_path, [session_id])

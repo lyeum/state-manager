@@ -89,7 +89,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 
 # ====================================================================
-# 라우터 등록
+# 라우터 등록 | Query 폴더명 대로 분리해서 구축해야 함
 # ====================================================================
 
 
@@ -99,11 +99,15 @@ def register_routers(app: FastAPI):
     from state_db.configs.api_routers import API_ROUTERS
 
     for router in API_ROUTERS:
-        app.include_router(
-            router,
-            prefix="/state",
-            tags=["State Management"],
-        )
+        if hasattr(router, "router"):
+            app.include_router(
+                router.router,
+                prefix="/state",
+                tags=["State Management"],
+            )
+        else:
+            # 혹시 모를 에러 방지를 위해 예외 처리
+            logger.error(f"❌ 라우터 객체를 찾을 수 없습니다: {router.__name__}")
 
 
 register_routers(app)

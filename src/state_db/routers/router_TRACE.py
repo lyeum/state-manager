@@ -171,7 +171,9 @@ async def get_recent_phases_endpoint(
 async def get_phase_by_phase_endpoint(
     session_id: str,
     repo: Annotated[TraceRepository, Depends(get_trace_repo)],
-    phase: str = Query(..., description="Phase 타입 (exploration, combat, dialogue, rest)"),
+    phase: str = Query(
+        ..., description="Phase 타입 (exploration, combat, dialogue, rest)"
+    ),
 ) -> Dict[str, Any]:
     """특정 Phase로의 전환 이력만 조회"""
     result = await repo.get_phase_by_phase(session_id, phase)

@@ -1,49 +1,79 @@
--- phase_history.sql
--- Phase 전환 이력 추적 테이블
+-- phase.sql
+-- Phase 관리 및 전환 이력 추적
 
 -- ====================================================================
--- 1. phase_history 테이블
+-- 1. phase 테이블
 -- ====================================================================
 
-CREATE TABLE IF NOT EXISTS phase_history (
+CREATE TABLE IF NOT EXISTS phase(
     history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL,
-    -- FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE,
-
-    -- Phase 전환 정보
+    
     previous_phase phase_type,
     new_phase phase_type NOT NULL,
-
-    -- 전환 시점의 Turn (상태 확정 시점)
     turn_at_transition INTEGER NOT NULL,
-
-    -- 전환 원인 (선택적)
-    transition_reason TEXT,  -- 'combat_started', 'combat_ended', 'gm_command' 등
-
-    -- 타임스탬프
+    transition_reason TEXT,
+    
     transitioned_at TIMESTAMP NOT NULL DEFAULT NOW(),
-
-    -- 인덱스
+    
+    CONSTRAINT fk_phase_session FOREIGN KEY (session_id)
+        REFERENCES session(session_id) ON DELETE CASCADE,
     CONSTRAINT check_phase_change CHECK (previous_phase IS DISTINCT FROM new_phase)
 );
 
-CREATE INDEX IF NOT EXISTS idx_phase_history_session_id ON phase_history(session_id);
-CREATE INDEX IF NOT EXISTS idx_phase_history_transitioned_at ON phase_history(transitioned_at DESC);
-CREATE INDEX IF NOT EXISTS idx_phase_history_new_phase ON phase_history(new_phase);
+CREATE INDEX IF NOT EXISTS idx_phase_session_id ON phase(session_id);
+CREATE INDEX IF NOT EXISTS idx_phase_transitioned_at ON phase(transitioned_at DESC);
+CREATE INDEX IF NOT EXISTS idx_phase_new_phase ON phase(new_phase);
 
-COMMENT ON TABLE phase_history IS 'Phase 전환 이력 추적 (디버깅 및 리플레이용)';
+COMMENT ON TABLE phase IS 'Phase 전환 이력 추적 (디버깅 및 리플레이용)';
 
 
 -- ====================================================================
--- 2. Phase 전환 시 자동 기록 트리거
+-- 2. Session 생성 시 초기 Phase 생성 / session 종료시 초기화
+-- ====================================================================
+
+CREATE OR REPLACE FUNCTION initialize_phase()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO phase (
+        session_id,
+        previous_phase,
+        new_phase,
+        turn_at_transition,
+        transition_reason,
+        transitioned_at
+    )
+    VALUES (
+        NEW.session_id,
+        NULL,
+        NEW.current_phase,
+        NEW.current_turn,
+        'session_start',
+        NEW.started_at
+    );
+
+    RAISE NOTICE '[Phase] Initial phase % recorded for session %',
+        NEW.current_phase, NEW.session_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_initialize_phase ON session;
+CREATE TRIGGER trigger_initialize_phase
+    AFTER INSERT ON session
+    FOR EACH ROW
+    EXECUTE FUNCTION initialize_phase();
+
+-- ====================================================================
+-- 3. Phase 전환 시 자동 기록 트리거
 -- ====================================================================
 
 CREATE OR REPLACE FUNCTION log_phase_transition()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Phase가 실제로 변경된 경우에만 기록
     IF OLD.current_phase IS DISTINCT FROM NEW.current_phase THEN
-        INSERT INTO phase_history (
+        INSERT INTO phase (
             session_id,
             previous_phase,
             new_phase,
@@ -55,7 +85,7 @@ BEGIN
             OLD.current_phase,
             NEW.current_phase,
             NEW.current_turn,
-            NULL  -- 원인은 별도 업데이트 가능
+            NULL
         );
 
         RAISE NOTICE '[Phase History] % -> % at turn % in session %',
@@ -66,7 +96,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 트리거 등록 (session 테이블에)
 DROP TRIGGER IF EXISTS trigger_log_phase_transition ON session;
 CREATE TRIGGER trigger_log_phase_transition
     AFTER UPDATE ON session
@@ -76,12 +105,66 @@ CREATE TRIGGER trigger_log_phase_transition
 
 
 -- ====================================================================
--- 3. Phase 이력 조회 함수
+-- 4. Phase 관리 함수
 -- ====================================================================
 
--- 특정 세션의 Phase 전환 이력 조회
-CREATE OR REPLACE FUNCTION get_phase_history(p_session_id UUID)
+CREATE OR REPLACE FUNCTION change_phase(
+    p_session_id UUID,
+    p_new_phase phase_type
+)
+RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE session
+    SET current_phase = p_new_phase
+    WHERE session_id = p_session_id
+      AND status = 'active';
+
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_session_allowed_actions(p_session_id UUID)
+RETURNS TEXT[] AS $$
+DECLARE
+    v_phase phase_type;
+BEGIN
+    SELECT current_phase INTO v_phase
+    FROM session
+    WHERE session_id = p_session_id
+      AND status = 'active';
+
+    RETURN CASE v_phase
+        WHEN 'exploration' THEN ARRAY['movement', 'perception', 'interaction']
+        WHEN 'combat' THEN ARRAY['initiative', 'attack', 'defense', 'damage']
+        WHEN 'dialogue' THEN ARRAY['persuasion', 'deception', 'emotion']
+        WHEN 'rest' THEN ARRAY['recovery', 'time_pass']
+        ELSE ARRAY[]::TEXT[]
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION is_action_allowed(
+    p_session_id UUID,
+    p_action TEXT
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    allowed_actions TEXT[];
+BEGIN
+    allowed_actions := get_session_allowed_actions(p_session_id);
+    RETURN p_action = ANY(allowed_actions);
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ====================================================================
+-- 5. Phase 이력 조회 함수
+-- ====================================================================
+
+CREATE OR REPLACE FUNCTION get_phase(p_session_id UUID)
 RETURNS TABLE (
+    history_id UUID,
+    session_id UUID,
     previous_phase phase_type,
     new_phase phase_type,
     turn_at_transition INTEGER,
@@ -91,32 +174,31 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT
+        ph.history_id,
+        ph.session_id,
         ph.previous_phase,
         ph.new_phase,
         ph.turn_at_transition,
         ph.transition_reason,
         ph.transitioned_at
-    FROM phase_history ph
+    FROM phase ph
     WHERE ph.session_id = p_session_id
     ORDER BY ph.transitioned_at ASC;
 END;
 $$ LANGUAGE plpgsql;
 
--- 현재 Phase가 얼마나 지속되었는지 조회
 CREATE OR REPLACE FUNCTION get_current_phase_duration(p_session_id UUID)
 RETURNS INTERVAL AS $$
 DECLARE
     phase_started_at TIMESTAMP;
     current_time TIMESTAMP := NOW();
 BEGIN
-    -- 가장 최근 Phase 전환 시각 조회
     SELECT transitioned_at INTO phase_started_at
-    FROM phase_history
+    FROM phase
     WHERE session_id = p_session_id
     ORDER BY transitioned_at DESC
     LIMIT 1;
 
-    -- Phase 전환 이력이 없으면 세션 시작 시각 사용
     IF phase_started_at IS NULL THEN
         SELECT started_at INTO phase_started_at
         FROM session
@@ -129,10 +211,9 @@ $$ LANGUAGE plpgsql;
 
 
 -- ====================================================================
--- 4. Phase 통계 함수 (분석용)
+-- 6. Phase 통계 함수
 -- ====================================================================
 
--- 세션에서 각 Phase별 소요 시간 집계
 CREATE OR REPLACE FUNCTION get_phase_statistics(p_session_id UUID)
 RETURNS TABLE (
     phase phase_type,
@@ -146,7 +227,7 @@ BEGIN
             ph.new_phase,
             LEAD(ph.transitioned_at, 1, NOW()) OVER (ORDER BY ph.transitioned_at)
                 - ph.transitioned_at AS duration
-        FROM phase_history ph
+        FROM phase ph
         WHERE ph.session_id = p_session_id
     )
     SELECT

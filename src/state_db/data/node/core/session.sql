@@ -198,69 +198,22 @@ $$ LANGUAGE plpgsql;
 -- 8. Phase 변경 함수 (규칙 컨텍스트 전환)
 -- ====================================================================
 
--- [내부 관리] Phase 변경 - 허용 행동 및 활성 규칙 범위 전환
+-- [내부 관리] Phase 변경 함수는 phase.sql에 정의되어 있음
+-- change_phase(p_session_id UUID, p_new_phase phase_type) -> phase.sql 참조
 --
 -- Phase별 규칙 범위:
 --   - exploration: movement, perception, interaction
 --   - combat: initiative, attack, defense, damage
 --   - dialogue: persuasion, deception, emotion
 --   - rest: recovery, time_pass
---
--- GM 또는 RuleEngine에 의해 호출됨
-
-CREATE OR REPLACE FUNCTION change_phase(
-    p_session_id UUID,
-    p_new_phase phase_type
-)
-RETURNS BOOLEAN AS $$
-BEGIN
-    UPDATE session
-    SET current_phase = p_new_phase
-    WHERE session_id = p_session_id
-      AND status = 'active';
-
-    IF FOUND THEN
-        RAISE NOTICE 'Phase changed to % in session %', p_new_phase, p_session_id;
-    END IF;
-
-    RETURN FOUND;
-END;
-$$ LANGUAGE plpgsql;
 
 
 -- ====================================================================
 -- 9. Turn 진행 함수
 -- ====================================================================
 
--- [내부 관리] 상태 변경 트랜잭션 commit 시 Turn 증가
---
--- Turn 증가 조건:
---   - RuleEngine 판정 결과로 State 변경이 확정될 때
---   - GM이 상태 적용을 승인(commit)했을 때
---   - Phase 전환으로 상태 스냅샷이 재계산될 때
---
--- Turn이 증가하지 않는 경우:
---   - 서술만 발생하고 상태 변경이 없는 경우
---   - 동일 상태의 재확인 또는 재서술
---   - 캐시 재동기화
---
-CREATE OR REPLACE FUNCTION advance_turn(p_session_id UUID)
-RETURNS INTEGER AS $$
-DECLARE
-    new_turn INTEGER;
-BEGIN
-    UPDATE session
-    SET current_turn = current_turn + 1
-    WHERE session_id = p_session_id
-      AND status = 'active'
-    RETURNING current_turn INTO new_turn;
-
-    -- 로그: Turn 진행 기록
-    RAISE NOTICE 'Turn advanced to % in session %', new_turn, p_session_id;
-
-    RETURN new_turn;
-END;
-$$ LANGUAGE plpgsql;
+-- [내부 관리] Turn 진행 함수는 turn.sql에 정의되어 있음
+-- advance_turn(p_session_id UUID) -> turn.sql 참조
 
 
 -- ====================================================================

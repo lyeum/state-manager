@@ -1,9 +1,3 @@
--- inventory.sql
--- State DB - Inventory Node
--- 역할: Player/NPC가 소유하는 아이템 컨테이너
--- 아이템 자체는 Rule DB 소유 (earn_item edge로 연결)
--- 모든 inventory는 session_id에 종속
-
 CREATE TABLE IF NOT EXISTS inventory (
     -- inventory node ID
     inventory_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,3 +39,46 @@ CREATE TRIGGER trg_inventory_updated_at
 BEFORE UPDATE ON inventory
 FOR EACH ROW
 EXECUTE FUNCTION update_inventory_updated_at();
+
+-- session의 시작/종료에 의존한 inventory 생성/초기화
+CREATE OR REPLACE FUNCTION initialize_player_inventory()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_player_id UUID;
+BEGIN
+    SELECT player_id INTO v_player_id
+    FROM player
+    WHERE session_id = NEW.session_id
+    LIMIT 1;
+
+    IF v_player_id IS NOT NULL THEN
+        INSERT INTO inventory (
+            session_id,
+            owner_entity_type,
+            owner_entity_id,
+            capacity,
+            weight_limit,
+            created_at
+        )
+        VALUES (
+            NEW.session_id,
+            'player',
+            v_player_id,
+            NULL,
+            NULL,
+            NEW.started_at
+        );
+
+        RAISE NOTICE '[Inventory] Initial inventory created for player % in session %',
+            v_player_id, NEW.session_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_04_initialize_inventory ON session;
+CREATE TRIGGER trigger_04_initialize_inventory
+    AFTER INSERT ON session
+    FOR EACH ROW
+    EXECUTE FUNCTION initialize_player_inventory();

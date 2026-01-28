@@ -1,51 +1,80 @@
--- turn_history.sql
--- Turn별 상태 변경 이력 추적 테이블
+-- turn.sql
+-- Turn 관리 및 상태 변경 이력 추적
 
 -- ====================================================================
--- 1. turn_history 테이블
+-- 1. turn 테이블
 -- ====================================================================
 
-CREATE TABLE IF NOT EXISTS turn_history (
+CREATE TABLE IF NOT EXISTS turn (
     history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL,
-    -- FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE,
-
-    -- Turn 정보
+    
     turn_number INTEGER NOT NULL,
-
-    -- 해당 Turn의 Phase 컨텍스트
     phase_at_turn phase_type NOT NULL,
-
-    -- Turn 증가 원인
-    turn_type VARCHAR(50) NOT NULL,  -- 'state_change', 'phase_transition', 'gm_commit' 등
-
-    -- 상태 변경 요약 (JSONB)
-    state_changes JSONB,  -- {"player_hp": -10, "inventory_added": [1, 3], "gold": +50} 등
-
-    -- 관련 엔티티 (선택적)
-    related_entities UUID[],  -- 영향받은 player, npc, enemy ID들
-
-    -- 타임스탬프
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    turn_type VARCHAR(50) NOT NULL,
+    state_changes JSONB,
+    related_entities UUID[],
+    
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT fk_turn_session FOREIGN KEY (session_id)
+        REFERENCES session(session_id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_turn_history_session_id ON turn_history(session_id);
-CREATE INDEX IF NOT EXISTS idx_turn_history_turn_number ON turn_history(session_id, turn_number);
-CREATE INDEX IF NOT EXISTS idx_turn_history_created_at ON turn_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_turn_session_id ON turn(session_id);
+CREATE INDEX IF NOT EXISTS idx_turn_turn_number ON turn(session_id, turn_number);
+CREATE INDEX IF NOT EXISTS idx_turn_created_at ON turn(created_at DESC);
 
-COMMENT ON TABLE turn_history IS 'Turn별 상태 변경 이력 추적 (트랜잭션 단위 기록)';
+COMMENT ON TABLE turn IS 'Turn별 상태 변경 이력 추적 (트랜잭션 단위 기록)';
 
 
 -- ====================================================================
--- 2. Turn 증가 시 자동 기록 트리거
+-- 2. Session 생성 시 초기 Turn 생성 & session 종료시 turn 초기화 
+-- ====================================================================
+
+CREATE OR REPLACE FUNCTION initialize_turn()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO turn (
+        session_id,
+        turn_number,
+        phase_at_turn,
+        turn_type,
+        state_changes,
+        created_at
+    )
+    VALUES (
+        NEW.session_id,
+        NEW.current_turn,
+        NEW.current_phase,
+        'session_start',
+        '{}'::jsonb,
+        NEW.started_at
+    );
+
+    RAISE NOTICE '[Turn] Initial turn % recorded for session %',
+        NEW.current_turn, NEW.session_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_initialize_turn ON session;
+CREATE TRIGGER trigger_initialize_turn
+    AFTER INSERT ON session
+    FOR EACH ROW
+    EXECUTE FUNCTION initialize_turn();
+
+
+-- ====================================================================
+-- 3. Turn 증가 시 자동 기록 트리거
 -- ====================================================================
 
 CREATE OR REPLACE FUNCTION log_turn_advance()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Turn이 증가한 경우에만 기록
     IF NEW.current_turn > OLD.current_turn THEN
-        INSERT INTO turn_history (
+        INSERT INTO turn (
             session_id,
             turn_number,
             phase_at_turn,
@@ -56,8 +85,8 @@ BEGIN
             NEW.session_id,
             NEW.current_turn,
             NEW.current_phase,
-            'auto',  -- 기본값 (나중에 업데이트 가능)
-            '{}'::jsonb  -- 빈 객체 (나중에 업데이트)
+            'auto',
+            '{}'::jsonb
         );
 
         RAISE NOTICE '[Turn History] Turn % recorded in session %',
@@ -68,7 +97,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 트리거 등록 (session 테이블에)
 DROP TRIGGER IF EXISTS trigger_log_turn_advance ON session;
 CREATE TRIGGER trigger_log_turn_advance
     AFTER UPDATE ON session
@@ -78,10 +106,26 @@ CREATE TRIGGER trigger_log_turn_advance
 
 
 -- ====================================================================
--- 3. Turn 이력 업데이트 함수 (상태 변경 기록용)
+-- 4. Turn 관리 함수
 -- ====================================================================
 
--- Turn에 상태 변경 내용 추가 기록
+CREATE OR REPLACE FUNCTION advance_turn(p_session_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    new_turn INTEGER;
+BEGIN
+    UPDATE session
+    SET current_turn = current_turn + 1
+    WHERE session_id = p_session_id
+      AND status = 'active'
+    RETURNING current_turn INTO new_turn;
+
+    RAISE NOTICE 'Turn advanced to % in session %', new_turn, p_session_id;
+
+    RETURN new_turn;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION update_turn_state_changes(
     p_session_id UUID,
     p_turn_number INTEGER,
@@ -90,7 +134,7 @@ CREATE OR REPLACE FUNCTION update_turn_state_changes(
 )
 RETURNS BOOLEAN AS $$
 BEGIN
-    UPDATE turn_history
+    UPDATE turn
     SET
         state_changes = p_state_changes,
         turn_type = p_turn_type
@@ -103,12 +147,13 @@ $$ LANGUAGE plpgsql;
 
 
 -- ====================================================================
--- 4. Turn 이력 조회 함수
+-- 5. Turn 이력 조회 함수
 -- ====================================================================
 
--- 특정 세션의 Turn 이력 조회
-CREATE OR REPLACE FUNCTION get_turn_history(p_session_id UUID)
+CREATE OR REPLACE FUNCTION get_turn(p_session_id UUID)
 RETURNS TABLE (
+    history_id UUID,
+    session_id UUID,
     turn_number INTEGER,
     phase_at_turn phase_type,
     turn_type VARCHAR,
@@ -118,23 +163,26 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT
+        th.history_id,
+        th.session_id,
         th.turn_number,
         th.phase_at_turn,
         th.turn_type,
         th.state_changes,
         th.created_at
-    FROM turn_history th
+    FROM turn th
     WHERE th.session_id = p_session_id
     ORDER BY th.turn_number ASC;
 END;
 $$ LANGUAGE plpgsql;
 
--- 특정 Turn의 상태 변경 조회
 CREATE OR REPLACE FUNCTION get_turn_details(
     p_session_id UUID,
     p_turn_number INTEGER
 )
 RETURNS TABLE (
+    history_id UUID,
+    session_id UUID,
     turn_number INTEGER,
     phase_at_turn phase_type,
     turn_type VARCHAR,
@@ -144,24 +192,27 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT
+        th.history_id,
+        th.session_id,
         th.turn_number,
         th.phase_at_turn,
         th.turn_type,
         th.state_changes,
         th.created_at
-    FROM turn_history th
+    FROM turn th
     WHERE th.session_id = p_session_id
       AND th.turn_number = p_turn_number;
 END;
 $$ LANGUAGE plpgsql;
 
--- Turn 범위로 조회 (리플레이 기능용)
 CREATE OR REPLACE FUNCTION get_turn_range(
     p_session_id UUID,
     p_start_turn INTEGER,
     p_end_turn INTEGER
 )
 RETURNS TABLE (
+    history_id UUID,
+    session_id UUID,
     turn_number INTEGER,
     phase_at_turn phase_type,
     turn_type VARCHAR,
@@ -171,12 +222,14 @@ RETURNS TABLE (
 BEGIN
     RETURN QUERY
     SELECT
+        th.history_id,
+        th.session_id,
         th.turn_number,
         th.phase_at_turn,
         th.turn_type,
         th.state_changes,
         th.created_at
-    FROM turn_history th
+    FROM turn th
     WHERE th.session_id = p_session_id
       AND th.turn_number BETWEEN p_start_turn AND p_end_turn
     ORDER BY th.turn_number ASC;
@@ -185,10 +238,9 @@ $$ LANGUAGE plpgsql;
 
 
 -- ====================================================================
--- 5. Turn 통계 함수
+-- 6. Turn 통계 함수
 -- ====================================================================
 
--- Phase별 Turn 수 집계
 CREATE OR REPLACE FUNCTION get_turns_per_phase(p_session_id UUID)
 RETURNS TABLE (
     phase phase_type,
@@ -199,53 +251,40 @@ BEGIN
     SELECT
         th.phase_at_turn AS phase,
         COUNT(*) AS turn_count
-    FROM turn_history th
+    FROM turn th
     WHERE th.session_id = p_session_id
     GROUP BY th.phase_at_turn
     ORDER BY turn_count DESC;
 END;
 $$ LANGUAGE plpgsql;
 
--- 평균 Turn 소요 시간
 CREATE OR REPLACE FUNCTION get_average_turn_duration(p_session_id UUID)
 RETURNS INTERVAL AS $$
 DECLARE
-    total_duration INTERVAL;
-    turn_count INTEGER;
+    avg_duration INTERVAL;
 BEGIN
-    SELECT
-        MAX(created_at) - MIN(created_at),
-        COUNT(*)
-    INTO total_duration, turn_count
-    FROM turn_history
+    SELECT AVG(created_at - LAG(created_at) OVER (ORDER BY turn_number))
+    INTO avg_duration
+    FROM turn
     WHERE session_id = p_session_id;
 
-    IF turn_count > 0 THEN
-        RETURN total_duration / turn_count;
-    ELSE
-        RETURN INTERVAL '0';
-    END IF;
+    RETURN COALESCE(avg_duration, INTERVAL '0');
 END;
 $$ LANGUAGE plpgsql;
 
 
 -- ====================================================================
--- 6. 리플레이 기능 (Turn 되돌리기)
+-- 7. 리플레이 기능
 -- ====================================================================
 
--- 특정 Turn으로 상태 복원 (개념적 구현)
 CREATE OR REPLACE FUNCTION replay_to_turn(
     p_session_id UUID,
     p_target_turn INTEGER
 )
 RETURNS JSONB AS $$
 DECLARE
-    turn_data RECORD;
     replay_result JSONB;
 BEGIN
-    -- 해당 Turn까지의 모든 상태 변경을 순차적으로 적용
-    -- (실제 구현 시 복잡한 롤백 로직 필요)
-
     SELECT jsonb_agg(
         jsonb_build_object(
             'turn', turn_number,
@@ -253,7 +292,7 @@ BEGIN
             'changes', state_changes
         ) ORDER BY turn_number
     ) INTO replay_result
-    FROM turn_history
+    FROM turn
     WHERE session_id = p_session_id
       AND turn_number <= p_target_turn;
 

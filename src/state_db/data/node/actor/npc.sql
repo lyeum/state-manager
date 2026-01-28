@@ -1,12 +1,6 @@
--- npc.sql
--- Entity schema 기반 NPC Node 정의
--- 시나리오에서 생성되며 시나리오에 종속
--- 세션 시작 시 시나리오와 함께 생성
-
--- 1. 테이블 생성
 CREATE TABLE IF NOT EXISTS npc (
     -- 엔티티 필수
-    npc_id UUID NOT NULL UNIQUE,
+    npc_id UUID PRIMARY KEY,
     entity_type VARCHAR(50) NOT NULL DEFAULT 'npc',
     name VARCHAR(100) NOT NULL,
     description TEXT DEFAULT '',
@@ -36,11 +30,19 @@ CREATE TABLE IF NOT EXISTS npc (
     }'::jsonb,
 
     -- RELATION 엣지 ID 저장
-    relations JSONB DEFAULT '[]'::jsonb,
-
-    -- 복합 고유 제약 (session 내에서 npc_id 고유)
-    CONSTRAINT pk_npc PRIMARY KEY (npc_id, session_id)
+    relations JSONB DEFAULT '[]'::jsonb
 );
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_npc_session_id ON npc(session_id);
+CREATE INDEX IF NOT EXISTS idx_npc_scenario_id ON npc(scenario_id);
+CREATE INDEX IF NOT EXISTS idx_npc_scenario_npc_id ON npc(scenario_npc_id);
+
+-- 주석
+COMMENT ON TABLE npc IS '시나리오에서 정의된 NPC 테이블';
+COMMENT ON COLUMN npc.npc_id IS 'NPC 고유 ID (시나리오 생성)';
+COMMENT ON COLUMN npc.session_id IS 'NPC가 속한 세션 ID';
+COMMENT ON COLUMN npc.scenario_npc_id IS '시나리오에서의 NPC 템플릿 ID';
 
 -- 2. updated_at 자동 갱신 트리거
 CREATE OR REPLACE FUNCTION update_npc_updated_at()
@@ -57,49 +59,52 @@ FOR EACH ROW
 EXECUTE FUNCTION update_npc_updated_at();
 
 -- 3. created_at을 session.started_at과 동기화
-CREATE OR REPLACE FUNCTION sync_npc_created_at()
+CREATE OR REPLACE FUNCTION initialize_npcs()
 RETURNS TRIGGER AS $$
 BEGIN
-    SELECT started_at INTO NEW.created_at
-    FROM session
-    WHERE session_id = NEW.session_id;
+    -- 시나리오에 정의된 초기 NPC들을 생성
+    -- 실제 구현 시 scenario_npcs 테이블에서 가져와야 함
+
+    INSERT INTO npc (
+        npc_id,
+        session_id,
+        scenario_id,
+        scenario_npc_id,
+        name,
+        description,
+        state,
+        created_at
+    )
+    VALUES (
+        gen_random_uuid(),
+        NEW.session_id,
+        NEW.scenario_id,
+        gen_random_uuid(),
+        'Guide NPC',
+        'Initial guide character',
+        '{
+            "numeric": {
+                "HP": 100,
+                "MP": 50,
+                "STR": null,
+                "DEX": null,
+                "INT": null,
+                "LUX": null,
+                "SAN": 10
+            },
+            "boolean": {}
+        }'::jsonb,
+        NEW.started_at
+    );
+
+    RAISE NOTICE '[NPC] Initial NPCs created for session %', NEW.session_id;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_npc_sync_created_at
-BEFORE INSERT ON npc
-FOR EACH ROW
-EXECUTE FUNCTION sync_npc_created_at();
-
--- 4. DML 예시
-INSERT INTO npc (
-    npc_id,
-    session_id,
-    scenario_id,
-    scenario_npc_id,
-    name,
-    description,
-    tags,
-    state
-) VALUES (
-    :npc_id,           -- 시나리오에서 전달
-    :session_id,       -- 현재 세션
-    :scenario_id,      -- 시나리오 UUID
-    :scenario_npc_id,  -- 시나리오 내 NPC ID
-    :name,
-    :description,
-    ARRAY['npc'],
-    jsonb_build_object(
-        'numeric', jsonb_build_object(
-            'HP', :HP,
-            'MP', :MP,
-            'STR', :STR,
-            'DEX', :DEX,
-            'INT', :INT,
-            'LUX', :LUX,
-            'SAN', :SAN
-        ),
-        'boolean', '{}'::jsonb
-    )
-);
+DROP TRIGGER IF EXISTS trigger_07_initialize_npcs ON session;
+CREATE TRIGGER trigger_07_initialize_npcs
+    AFTER INSERT ON session
+    FOR EACH ROW
+    EXECUTE FUNCTION initialize_npcs();

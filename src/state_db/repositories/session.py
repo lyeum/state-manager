@@ -15,6 +15,8 @@ from state_db.repositories.base import BaseRepository
 
 
 class SessionRepository(BaseRepository):
+    # Session Lifecycle
+
     async def start(
         self, scenario_id: str, act: int, sequence: int, location: str
     ) -> SessionInfo:
@@ -33,6 +35,20 @@ class SessionRepository(BaseRepository):
             raise Exception("Failed to create session")
 
         return await self.get_info(session_id)
+
+    async def end(self, session_id: str) -> None:
+        sql_path = self.query_dir / "MANAGE" / "session" / "end_session.sql"
+        await run_sql_command(sql_path, [session_id])
+
+    async def pause(self, session_id: str) -> None:
+        sql_path = self.query_dir / "MANAGE" / "session" / "pause_session.sql"
+        await run_sql_command(sql_path, [session_id])
+
+    async def resume(self, session_id: str) -> None:
+        sql_path = self.query_dir / "MANAGE" / "session" / "resume_session.sql"
+        await run_sql_command(sql_path, [session_id])
+
+    # Session Query
 
     async def get_info(self, session_id: str) -> SessionInfo:
         sql_path = self.query_dir / "INQUIRY" / "Session_show.sql"
@@ -61,23 +77,32 @@ class SessionRepository(BaseRepository):
         results = await run_sql_query(sql_path)
         return [SessionInfo.model_validate(row) for row in results]
 
-    async def end(self, session_id: str) -> None:
-        sql_path = self.query_dir / "MANAGE" / "session" / "end_session.sql"
-        await run_sql_command(sql_path, [session_id])
+    async def get_progress(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "INQUIRY" / "Progress_get.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    async def pause(self, session_id: str) -> None:
-        sql_path = self.query_dir / "MANAGE" / "session" / "pause_session.sql"
-        await run_sql_command(sql_path, [session_id])
-
-    async def resume(self, session_id: str) -> None:
-        sql_path = self.query_dir / "MANAGE" / "session" / "resume_session.sql"
-        await run_sql_command(sql_path, [session_id])
+    # Location
 
     async def update_location(self, session_id: str, location: str) -> None:
         sql_path = self.query_dir / "UPDATE" / "update_location.sql"
         await run_sql_command(sql_path, [session_id, location])
 
-    # Phase/Turn/Act/Sequence
+    async def get_location(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "INQUIRY" / "Location_now.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    async def location_change(self, session_id: str, location: str) -> None:
+        sql_path = self.query_dir / "MANAGE" / "location" / "location_change.sql"
+        await run_sql_command(sql_path, [session_id, location])
+
+    # Phase
+
     async def change_phase(self, session_id: str, phase: str) -> PhaseChangeResult:
         sql_path = self.query_dir / "MANAGE" / "phase" / "change_phase.sql"
         await run_sql_command(sql_path, [session_id, phase])
@@ -89,6 +114,22 @@ class SessionRepository(BaseRepository):
         if result:
             return PhaseChangeResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Session phase not found")
+
+    async def phase_check(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "MANAGE" / "phase" / "phase_check.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    async def is_action_allowed(self, session_id: str, action: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "MANAGE" / "phase" / "is_action_allowed.sql"
+        result = await run_sql_query(sql_path, [session_id, action])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Turn
 
     async def add_turn(self, session_id: str) -> TurnAddResult:
         sql_path = self.query_dir / "MANAGE" / "turn" / "add_turn.sql"
@@ -103,6 +144,15 @@ class SessionRepository(BaseRepository):
         if result:
             return TurnAddResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Session turn not found")
+
+    async def turn_changed(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "MANAGE" / "turn" / "turn_changed.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Act
 
     async def change_act(self, session_id: str, act: int) -> ActChangeResult:
         sql_path = self.query_dir / "MANAGE" / "act" / "select_act.sql"
@@ -122,6 +172,22 @@ class SessionRepository(BaseRepository):
         if result:
             return ActChangeResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Session not found")
+
+    async def get_act(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "INQUIRY" / "Act_now.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    async def act_check(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "MANAGE" / "act" / "act_check.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return result[0]
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Sequence
 
     async def change_sequence(
         self, session_id: str, sequence: int
@@ -144,13 +210,6 @@ class SessionRepository(BaseRepository):
             return SequenceChangeResult.model_validate(result[0])
         raise HTTPException(status_code=404, detail="Session not found")
 
-    async def get_act(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Act_now.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")
-
     async def get_sequence(self, session_id: str) -> Dict[str, Any]:
         sql_path = self.query_dir / "INQUIRY" / "Sequence_now.sql"
         result = await run_sql_query(sql_path, [session_id])
@@ -158,15 +217,8 @@ class SessionRepository(BaseRepository):
             return result[0]
         raise HTTPException(status_code=404, detail="Session not found")
 
-    async def get_location(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Location_now.sql"
-        result = await run_sql_query(sql_path, [session_id])
-        if result:
-            return result[0]
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    async def get_progress(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Progress_get.sql"
+    async def limit_sequence(self, session_id: str) -> Dict[str, Any]:
+        sql_path = self.query_dir / "MANAGE" / "sequence" / "limit_sequence.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]

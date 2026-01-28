@@ -1,9 +1,3 @@
--- player.sql
--- Entity schema 기반 Player Node 정의
--- state_db에서 사용자 입력으로 생성
--- 세션 시작 시 가장 먼저 생성됨
-
--- 1. 테이블 생성
 CREATE TABLE IF NOT EXISTS player (
     -- 엔티티 필수
     player_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,48 +45,50 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_player_updated_at ON player;
 CREATE TRIGGER trg_player_updated_at
 BEFORE UPDATE ON player
 FOR EACH ROW
 EXECUTE FUNCTION update_player_updated_at();
 
 -- 3. created_at을 session.started_at과 동기화하는 트리거
-CREATE OR REPLACE FUNCTION sync_player_created_at()
+CREATE OR REPLACE FUNCTION initialize_player()
 RETURNS TRIGGER AS $$
 BEGIN
-    SELECT started_at INTO NEW.created_at
-    FROM session
-    WHERE session_id = NEW.session_id;
+    INSERT INTO player (
+        session_id,
+        name,
+        description,
+        state,
+        created_at
+    )
+    VALUES (
+        NEW.session_id,
+        'Player',
+        'Default player character',
+        '{
+            "numeric": {
+                "HP": 100,
+                "MP": 50,
+                "STR": null,
+                "DEX": null,
+                "INT": null,
+                "LUX": null,
+                "SAN": 10
+            },
+            "boolean": {}
+        }'::jsonb,
+        NEW.started_at
+    );
+
+    RAISE NOTICE '[Player] Initial player created for session %', NEW.session_id;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_player_sync_created_at
-BEFORE INSERT ON player
-FOR EACH ROW
-EXECUTE FUNCTION sync_player_created_at();
-
-
--- 4. DML 예시
-INSERT INTO player (
-    session_id,
-    name,
-    description,
-    state
-) VALUES (
-    :session_id,  -- 세션 시작 직후 전달받음
-    :name,
-    :description,
-    jsonb_build_object(
-        'numeric', jsonb_build_object(
-            'HP', 100,
-            'MP', 50,
-            'STR', :STR,
-            'DEX', :DEX,
-            'INT', :INT,
-            'LUX', :LUX,
-            'SAN', :SAN
-        ),
-        'boolean', '{}'::jsonb
-    )
-);
+DROP TRIGGER IF EXISTS trigger_03_initialize_player ON session;
+CREATE TRIGGER trigger_03_initialize_player
+    AFTER INSERT ON session
+    FOR EACH ROW
+    EXECUTE FUNCTION initialize_player();
