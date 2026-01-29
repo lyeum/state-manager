@@ -1,0 +1,41 @@
+#!/bin/bash
+
+CTX=act
+
+if ! docker context inspect "$CTX" >/dev/null 2>&1; then
+  docker context create "$CTX"
+fi
+
+COMMAND=$1
+shift
+
+case "$COMMAND" in
+    lint)
+        echo "Running Ruff Linter & Formatter..."
+        uvx ruff check . --fix
+        uvx ruff format .
+        ;;
+    pre-commit)
+        echo "Running Pre-commit hooks..."
+        uvx pre-commit run --all-files
+        ;;
+    ci-dev)
+        echo "Simulating Dev CI (act)..."
+        docker context use "$CTX"
+        act pull_request -W .github/workflows/ci-dev.yml --container-architecture linux/amd64
+        docker context use default
+        ;;
+    run)
+        echo "Starting State Manager (uvicorn)..."
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+        uv run python src/state_db/main.py
+        ;;
+    run-compose)
+        echo "Starting services with Docker Compose (dev)..."
+        docker compose -f docker-compose.dev.yml up --build -d
+        ;;
+    *)
+        echo "Usage: project {lint|pre-commit|ci-dev|run|run-compose}"
+        exit 1
+        ;;
+esac

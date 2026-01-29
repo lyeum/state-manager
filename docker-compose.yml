@@ -1,0 +1,27 @@
+services:
+  state-manager:
+    build: .
+    image: ${IMAGE_NAME}
+    container_name: state-manager
+    restart: unless-stopped
+
+    ports:
+      - "0.0.0.0:${PORT}:${PORT}"
+
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+      APP_HOST: 0.0.0.0
+      APP_PORT: ${PORT}
+      APP_ENV: production
+
+    networks:
+      - platform-net
+
+networks:
+  platform-net:
+    name: platform-net
+    external: true

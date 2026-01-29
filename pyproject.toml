@@ -3,26 +3,33 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "senario-writer"
+name = "state-manager"
 version = "0.1.0"
-description = "Add your description here"
+description = "state-manager: A robust state management system for applications."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "asyncpg>=0.31.0",
     "fastapi>=0.128.0",
     "httpx>=0.28.1",
     "langchain-core>=1.2.7",
     "langgraph>=1.0.6",
+    "python-dotenv>=1.2.1",
     "uvicorn>=0.40.0",
 ]
 
 [dependency-groups]
-dev = ["pytest>=9.0.2"]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "testcontainers[postgres]>=4.9.1",
+]
 
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["writer"]
+packages = ["state_db"]
 
 
 [tool.uv]
@@ -30,10 +37,13 @@ index-url = "https://pypi.org/simple"
 
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning:testcontainers.*",
+]
 
 
 [tool.ruff]
@@ -52,4 +62,23 @@ indent-style = "space"
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["writer"]
+known-first-party = ["state_db"]
+
+[tool.mypy]
+python_version = "3.11"
+python_executable = ".venv/bin/python"
+mypy_path = "src"
+strict = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "asyncpg.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fastapi.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pydantic.*"
+ignore_missing_imports = true
