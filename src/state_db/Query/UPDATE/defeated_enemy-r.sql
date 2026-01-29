@@ -16,24 +16,12 @@ SET
         '0'::jsonb
     ),
     updated_at = NOW()
-WHERE enemy_instance_id = $1
+WHERE enemy_id = $1
   AND session_id = $2
   AND is_defeated = false
 RETURNING
-    enemy_instance_id,
+    enemy_id AS enemy_instance_id,
     enemy_id,
     name,
     defeated_at,
     (state->'numeric'->>'HP')::int AS final_hp;
-
--- 파라미터:
--- $1: enemy_instance_id (UUID)
--- $2: session_id (UUID)
-
--- 결과 예:
--- enemy_instance_id | enemy_id | name           | defeated_at         | final_hp
--- ------------------|----------|----------------|---------------------|----------
--- uuid-abc          | 1        | Goblin Warrior | 2026-01-23 10:30:00 | 0
-
--- 사용 예:
--- 전투 종료 시 명시적으로 처치 상태 기록

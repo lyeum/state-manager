@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS enemy (
         "boolean": {}
     }'::jsonb,
 
+    -- 상태 플래그
+    is_defeated BOOLEAN NOT NULL DEFAULT false,
+    defeated_at TIMESTAMP,
+
     -- RELATION 엣지 ID 저장
     relations JSONB DEFAULT '[]'::jsonb,
 
@@ -43,6 +47,17 @@ CREATE TABLE IF NOT EXISTS enemy (
 
 -- 만약 이미 테이블이 있다면 DEFAULT 추가
 ALTER TABLE enemy ALTER COLUMN enemy_id SET DEFAULT gen_random_uuid();
+
+-- 신규 컬럼 추가 (이미 존재하지 않는 경우)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='enemy' AND column_name='is_defeated') THEN
+        ALTER TABLE enemy ADD COLUMN is_defeated BOOLEAN NOT NULL DEFAULT false;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='enemy' AND column_name='defeated_at') THEN
+        ALTER TABLE enemy ADD COLUMN defeated_at TIMESTAMP;
+    END IF;
+END $$;
 
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_enemy_session_id ON enemy(session_id);
