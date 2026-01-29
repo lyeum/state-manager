@@ -1,4 +1,3 @@
--- --------------------------------------------------------------------
 -- update_player_hp.sql
 -- 플레이어 HP 변경
 -- API: PUT /state/player/{player_id}/hp

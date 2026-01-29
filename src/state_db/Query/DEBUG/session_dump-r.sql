@@ -27,7 +27,7 @@ SELECT * FROM npc WHERE session_id = $1;
 SELECT * FROM enemy WHERE session_id = $1 AND is_defeated = false;
 
 -- Phase History
-SELECT * FROM phase_history WHERE session_id = $1 ORDER BY transitioned_at;
+SELECT * FROM phase WHERE session_id = $1 ORDER BY transitioned_at;
 
 -- Turn History
-SELECT * FROM turn_history WHERE session_id = $1 ORDER BY turn_number;
+SELECT * FROM turn WHERE session_id = $1 ORDER BY turn_number;
