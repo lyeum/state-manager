@@ -7,15 +7,15 @@ BEGIN;
 INSERT INTO player_inventory (player_id, item_id, quantity)
 VALUES (:player_id, :item_id, :amount)
 ON CONFLICT (player_id, item_id)
-DO UPDATE SET 
+DO UPDATE SET
     quantity = player_inventory.quantity + EXCLUDED.quantity,
     updated_at = NOW();
 
 -- 2. 통합 턴 기록 및 전진
 -- state_changes에 습득 정보를, related_entities에 관련 ID를 포함
 SELECT record_state_change(
-    :session_id, 
-    'item_acquisition', 
+    :session_id,
+    'item_acquisition',
     jsonb_build_object(
         'inventory_added', ARRAY[:item_id],
         'added_quantity', :amount,

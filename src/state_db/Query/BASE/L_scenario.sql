@@ -21,7 +21,7 @@ BEGIN
         created_at,
         updated_at
     )
-    SELECT 
+    SELECT
         gen_random_uuid(),
         entity_type,
         name,

@@ -5,18 +5,18 @@ BEGIN;
 
 -- 1. 수량 차감 (수량 부족 시 0개 행 수정됨)
 UPDATE player_inventory
-SET 
+SET
     quantity = quantity - :amount,
     updated_at = NOW()
-WHERE player_id = :player_id 
-  AND item_id = :item_id 
+WHERE player_id = :player_id
+  AND item_id = :item_id
   AND quantity >= :amount;
 
 -- 2. 통합 턴 기록 및 전진
 -- rule_id 등 GM의 판단 근거를 state_changes에 기록
 SELECT record_state_change(
-    :session_id, 
-    'use_item', 
+    :session_id,
+    'use_item',
     jsonb_build_object(
         'inventory_lost', ARRAY[:item_id],
         'lost_quantity', :amount,

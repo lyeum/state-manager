@@ -99,22 +99,22 @@ CREATE TRIGGER trigger_update_session_timestamp
 -- scenario_id 역시 B_scenario에서 생성할 시스템 마스터 ID('000...0')를 참조합니다.
 
 INSERT INTO session (
-    session_id, 
-    scenario_id, 
-    current_act, 
-    current_sequence, 
-    current_phase, 
+    session_id,
+    scenario_id,
+    current_act,
+    current_sequence,
+    current_phase,
     status,
     location
 ) VALUES (
-    '00000000-0000-0000-0000-000000000000', 
-    '00000000-0000-0000-0000-000000000000', 
-    1, 
-    1, 
-    'dialogue', 
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-0000-0000-000000000000',
+    1,
+    1,
+    'dialogue',
     'active',
     'SYSTEM_MASTER_LOCATION'
 ) ON CONFLICT (session_id) DO NOTHING;
 
 -- 6. 주석 추가
-COMMENT ON TABLE session IS '플레이 세션 전역 컨테이너 - phase 중심 상태 관리';    
+COMMENT ON TABLE session IS '플레이 세션 전역 컨테이너 - phase 중심 상태 관리';
