@@ -1,10 +1,27 @@
--- 적 패배(사망) 처리
--- $1: enemy_instance_id, $2: session_id
--- is_active 컬럼이 없으므로 HP를 0으로 만들고 태그에 'defeated' 추가
+-- --------------------------------------------------------------------
+-- defeated_enemy.sql
+-- 적 처치 처리
+-- 용도: 적을 명시적으로 처치 상태로 변경
+-- API: POST /state/enemy/{enemy_instance_id}/defeat
+-- --------------------------------------------------------------------
+
+-- 적 처치 상태 업데이트
 UPDATE enemy
-SET state = jsonb_set(state, '{numeric, HP}', '0'::jsonb),
-    tags = array_append(tags, 'defeated')
-WHERE enemy_id = $1 AND session_id = $2
+SET
+    is_defeated = true,
+    defeated_at = NOW(),
+    state = jsonb_set(
+        state,
+        '{numeric,HP}',
+        '0'::jsonb
+    ),
+    updated_at = NOW()
+WHERE enemy_id = $1
+  AND session_id = $2
+  AND is_defeated = false
 RETURNING
     enemy_id AS enemy_instance_id,
-    'defeated' AS status;
+    enemy_id,
+    name,
+    defeated_at,
+    (state->'numeric'->>'HP')::int AS final_hp;

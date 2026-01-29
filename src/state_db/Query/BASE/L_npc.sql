@@ -24,7 +24,7 @@ BEGIN
         created_at,
         updated_at
     )
-    SELECT
+    SELECT 
         gen_random_uuid(),  -- 복사본에 새로운 고유 ID 부여
         entity_type,
         name,
@@ -38,7 +38,7 @@ BEGIN
         NOW(),
         NOW()
     FROM npc
-    WHERE session_id = MASTER_SESSION_ID
+    WHERE session_id = MASTER_SESSION_ID 
       AND scenario_id = NEW.scenario_id;
 
     RAISE NOTICE '[NPC] Initialized session % by cloning Master NPCs from Session 0', NEW.session_id;

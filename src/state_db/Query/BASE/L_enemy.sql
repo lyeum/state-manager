@@ -25,7 +25,7 @@ BEGIN
         created_at,
         updated_at
     )
-    SELECT
+    SELECT 
         gen_random_uuid(),  -- 복사본은 새로운 고유 ID 생성
         entity_type,
         name,
@@ -40,7 +40,7 @@ BEGIN
         NOW(),
         NOW()
     FROM enemy
-    WHERE session_id = MASTER_SESSION_ID
+    WHERE session_id = MASTER_SESSION_ID 
       AND scenario_id = NEW.scenario_id;
 
     RAISE NOTICE '[Enemy] Initialized session % by cloning Master Data from Session 0', NEW.session_id;

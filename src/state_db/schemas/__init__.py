@@ -1,4 +1,19 @@
-from .base import Phase
+from .auth import (
+    APIKeyCreateRequest,
+    APIKeyCreateResponse,
+    APIKeyDeleteResponse,
+    APIKeyInfo,
+)
+from .base import (
+    EnemyBase,
+    EntityBase,
+    ItemBase,
+    NPCBase,
+    Phase,
+    PlayerBase,
+    SessionBase,
+    StateBase,
+)
 from .enemy import EnemyHPUpdateRequest, EnemySpawnRequest
 from .inventory import InventoryItem, InventoryUpdateRequest, InventoryUpdateResponse
 from .item import ItemEarnRequest, ItemInfoResponse, ItemUseRequest
@@ -36,6 +51,13 @@ from .world import (
 
 __all__ = [
     "Phase",
+    "SessionBase",
+    "EntityBase",
+    "StateBase",
+    "PlayerBase",
+    "NPCBase",
+    "EnemyBase",
+    "ItemBase",
     "SessionStartRequest",
     "SessionStartResponse",
     "SessionEndResponse",
@@ -62,6 +84,10 @@ __all__ = [
     "PhaseChangeRequest",
     "ActChangeRequest",
     "SequenceChangeRequest",
+    "APIKeyCreateRequest",
+    "APIKeyCreateResponse",
+    "APIKeyInfo",
+    "APIKeyDeleteResponse",
     "ScenarioInjectNPC",
     "ScenarioInjectEnemy",
     "ScenarioInjectItem",

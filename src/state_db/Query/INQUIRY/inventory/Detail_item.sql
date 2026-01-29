@@ -1,5 +1,5 @@
 -- [용도] 특정 아이템의 전체 속성 및 규칙 확인
-SELECT
+SELECT 
     item_id,
     name,
     description,

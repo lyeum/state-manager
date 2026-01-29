@@ -1,7 +1,6 @@
 📋 DML 생성 및 디렉토리 매핑 계획안
-
-개요
-   목적: 정의된 DDL(FIRST/BASE)에 따라 실제 게임 데이터 흐름(DML)을 구축
+1. 개요
+목적: 정의된 DDL(FIRST/BASE)에 따라 실제 게임 데이터 흐름(DML)을 구축
 
 핵심 원칙:
 
@@ -11,9 +10,9 @@
 
 데이터 격리: START_by_session 단계에서 각 세션 인스턴스 데이터의 완전한 격리
 
-단계별 DML 매핑 상세
-   1️⃣ START_by_session/ (세션 초기화)
-   매핑 위치: START_by_session/
+2. 단계별 DML 매핑 상세
+1️⃣ START_by_session/ (세션 초기화)
+매핑 위치: START_by_session/
 
 작업 내용:
 

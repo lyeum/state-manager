@@ -11,8 +11,8 @@ WHERE player_id = :player_id AND npc_id = :npc_id;
 
 -- 2. 통합 턴 기록
 SELECT record_state_change(
-    :session_id,
-    'social_interaction',
+    :session_id, 
+    'social_interaction', 
     jsonb_build_object(
         'npc_id', :npc_id,
         'affinity_change', :change_amount,
