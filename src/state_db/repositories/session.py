@@ -174,7 +174,7 @@ class SessionRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_act(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Act_now.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Current_act.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]
@@ -211,7 +211,7 @@ class SessionRepository(BaseRepository):
         raise HTTPException(status_code=404, detail="Session not found")
 
     async def get_sequence(self, session_id: str) -> Dict[str, Any]:
-        sql_path = self.query_dir / "INQUIRY" / "Sequence_now.sql"
+        sql_path = self.query_dir / "INQUIRY" / "Current_sequence.sql"
         result = await run_sql_query(sql_path, [session_id])
         if result:
             return result[0]

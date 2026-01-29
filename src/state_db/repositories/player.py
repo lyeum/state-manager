@@ -56,7 +56,7 @@ class PlayerRepository(BaseRepository):
     async def update_hp(
         self, player_id: str, session_id: str, hp_change: int
     ) -> PlayerHPUpdateResult:
-        sql_path = self.query_dir / "UPDATE" / "update_player_hp.sql"
+        sql_path = self.query_dir / "UPDATE" / "player" / "update_player_hp.sql"
         result = await run_sql_query(sql_path, [player_id, session_id, hp_change])
         if result:
             return PlayerHPUpdateResult.model_validate(result[0])
@@ -67,7 +67,7 @@ class PlayerRepository(BaseRepository):
     ) -> PlayerStats:
         import json
 
-        sql_path = self.query_dir / "UPDATE" / "update_player_stats.sql"
+        sql_path = self.query_dir / "UPDATE" / "player" / "update_player_stats.sql"
         params = [player_id, session_id, json.dumps(stat_changes)]
         await run_sql_command(sql_path, params)
         return await self.get_stats(player_id)
@@ -91,7 +91,7 @@ class PlayerRepository(BaseRepository):
     async def update_npc_affinity(
         self, player_id: str, npc_id: str, affinity_change: int
     ) -> NPCAffinityUpdateResult:
-        sql_path = self.query_dir / "UPDATE" / "update_npc_affinity.sql"
+        sql_path = self.query_dir / "UPDATE" / "update_npc_affinity-r.sql"
         result = await run_sql_query(sql_path, [player_id, npc_id, affinity_change])
         new_affinity = result[0].get("new_affinity", 0) if result else 0
         return NPCAffinityUpdateResult(

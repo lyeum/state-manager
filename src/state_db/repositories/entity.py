@@ -75,7 +75,7 @@ class EntityRepository(BaseRepository):
     async def update_enemy_hp(
         self, session_id: str, enemy_instance_id: str, hp_change: int
     ) -> EnemyHPUpdateResult:
-        sql_path = self.query_dir / "UPDATE" / "update_enemy_hp.sql"
+        sql_path = self.query_dir / "UPDATE" / "enemy" / "update_enemy_hp.sql"
         result = await run_sql_query(
             sql_path, [enemy_instance_id, session_id, hp_change]
         )
@@ -92,5 +92,5 @@ class EntityRepository(BaseRepository):
         return RemoveEntityResult()
 
     async def defeat_enemy(self, session_id: str, enemy_instance_id: str) -> None:
-        sql_path = self.query_dir / "UPDATE" / "defeated_enemy.sql"
+        sql_path = self.query_dir / "UPDATE" / "defeated_enemy-r.sql"
         await run_sql_command(sql_path, [enemy_instance_id, session_id])

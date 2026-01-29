@@ -1,23 +1,25 @@
-# Current Task: Fix failing test in Trace Router
+# Current Task: Post-merge System Integrity Verification
 
 ## 목적
 
-- `tests/test_router_TRACE.py::test_get_latest_turn` 테스트 실패 해결
-- FastAPI 라우트 우선순위 문제로 인한 422 에러 수정
+- 다른 작업자의 변경 사항과 머지된 후 시스템의 정합성 및 기능적 무결성 검증
+- 전체 테스트 스위트를 실행하여 회귀 오류 발생 여부 확인
 
 ## 현황
 
-- `test_get_latest_turn`이 422 Unprocessable Entity 반환
-- `/state/session/{session_id}/turn/latest` 요청이 `/state/session/{session_id}/turn/{turn_number}`(int)로 잘못 매칭됨
+- 머지 완료 직후 상태
+- `CORE_ENGINE_HANDBOOK.md` 내용 확인 완료
+- 주요 데이터 아키텍처(Session 0 Deep Copy 등) 및 기술 스택 파악 완료
 
 ## 계획
 
-1. `src/state_db/routers/router_TRACE.py`에서 `get_latest_turn_endpoint`를 `get_turn_details_endpoint`보다 먼저 정의하도록 순서 변경
-2. `uv run pytest tests/test_router_TRACE.py`로 수정 사항 검증
-3. 전체 테스트 재실행하여 영향도 확인
+1. `uv run pytest tests/ -v` 명령어를 통해 전체 테스트 실행
+2. 실패하는 테스트가 있을 경우 로그 분석 및 원인 파악
+3. 테스트 결과 요약 및 업데이트
 
 ## 진행 상황
 
-- [x] 라우터 순서 변경
-- [x] TRACE 라우터 테스트 통과
-- [x] 전체 테스트 통과
+- [x] 전체 테스트 실행
+- [x] 순환 참조(Circular Import) 오류 수정 (`configs/__init__.py`)
+- [x] 레포지토리 내 SQL 파일 경로 불일치 수정 (`entity.py`, `player.py`, `session.py`)
+- [x] 전체 테스트 재실행 및 100% 통과 확인
