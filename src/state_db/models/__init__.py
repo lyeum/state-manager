@@ -2,6 +2,7 @@ from .base import JsonField, Phase, SessionStatus
 from .entity import (
     EnemyHPUpdateResult,
     EnemyInfo,
+    ItemInfo,
     NPCInfo,
     RemoveEntityResult,
     SpawnResult,
@@ -21,9 +22,15 @@ from .session import SessionInfo
 from .world import (
     ActChangeResult,
     ApplyJudgmentSkipped,
+    EntityRelationInfo,
     LocationUpdateResult,
     PhaseChangeResult,
+    PlayerNPCRelationInfo,
+    ScenarioActInfo,
+    ScenarioSequenceInfo,
     SequenceChangeResult,
+    SequenceDetailInfo,
+    SequenceEntityInfo,
     StateUpdateResult,
     TurnAddResult,
 )
@@ -34,6 +41,7 @@ __all__ = [
     "SessionStatus",
     "SessionInfo",
     "InventoryItem",
+    "ItemInfo",
     "NPCInfo",
     "NPCRelation",
     "EnemyInfo",
@@ -54,4 +62,10 @@ __all__ = [
     "RemoveEntityResult",
     "StateUpdateResult",
     "ApplyJudgmentSkipped",
+    "ScenarioActInfo",
+    "ScenarioSequenceInfo",
+    "SequenceDetailInfo",
+    "SequenceEntityInfo",
+    "EntityRelationInfo",
+    "PlayerNPCRelationInfo",
 ]
