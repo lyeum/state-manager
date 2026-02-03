@@ -27,6 +27,7 @@ Repository에서 실제로 호출되는 SQL 파일 목록입니다.
 | `INQUIRY/Npc_relations.sql` | NPC 관계 조회 | PlayerRepository |
 | `INQUIRY/Player_stats.sql` | 플레이어 스탯 조회 | PlayerRepository |
 | `INQUIRY/Progress_get.sql` | 진행 상태 조회 | ProgressRepository |
+| `INQUIRY/inventory/Player_item_ids.sql` | 플레이어 아이템 ID 조회 | PlayerRepository |
 | `INQUIRY/phase/ALLOWED_by_phase.sql` | 페이즈별 허용 행동 | LifecycleStateRepository |
 | `INQUIRY/session/Session_active.sql` | 활성 세션 목록 | SessionRepository |
 | `INQUIRY/session/Session_all.sql` | 전체 세션 목록 | SessionRepository |
@@ -54,8 +55,11 @@ Repository에서 실제로 호출되는 SQL 파일 목록입니다.
 | `MANAGE/enemy/remove_enemy.sql` | 적 제거 | EntityRepository |
 | `MANAGE/enemy/spawn_enemy.sql` | 적 스폰 | EntityRepository |
 | `MANAGE/location/location_change.sql` | 위치 변경 | ProgressRepository |
-| `MANAGE/npc/remove_npc.sql` | NPC 제거 | EntityRepository |
+| `MANAGE/npc/remove_npc.sql` | NPC 완전 제거 | EntityRepository |
 | `MANAGE/npc/spawn_npc.sql` | NPC 스폰 | EntityRepository |
+| `MANAGE/npc/depart_npc.sql` | NPC 퇴장 (soft delete) | EntityRepository |
+| `MANAGE/npc/return_npc.sql` | 퇴장한 NPC 복귀 | EntityRepository |
+| `MANAGE/session/delete_session.sql` | 세션 완전 삭제 | SessionRepository |
 | `MANAGE/phase/change_phase.sql` | 페이즈 변경 | LifecycleStateRepository |
 | `MANAGE/phase/phase_check.sql` | 페이즈 유효성 검사 | LifecycleStateRepository |
 | `MANAGE/sequence/add_sequence.sql` | Sequence 증가 | ProgressRepository |
@@ -80,6 +84,7 @@ Repository에서 실제로 호출되는 SQL 파일 목록입니다.
 | `UPDATE/player/update_player_hp.sql` | 플레이어 HP 업데이트 | PlayerRepository |
 | `UPDATE/player/update_player_stats.sql` | 플레이어 스탯 업데이트 | PlayerRepository |
 | `UPDATE/relations/update_affinity.sql` | NPC 호감도 업데이트 | PlayerRepository |
+| `UPDATE/turn/record_item_use.sql` | 아이템 사용 기록 | PlayerRepository |
 
 ### TRACE 폴더 (이력 추적)
 
@@ -116,12 +121,11 @@ Repository에서 아직 사용하지 않는 SQL 파일입니다. 향후 기능 �
 | `INQUIRY/inventory/Check_item.sql` | 아이템 존재 확인 | 유효성 검사용 |
 | `INQUIRY/inventory/Current_inventory.sql` | 인벤토리 설정 조회 | 인벤토리 제한 확인용 |
 | `INQUIRY/inventory/Detail_item.sql` | 아이템 상세 정보 | 아이템 툴팁용 |
-| `INQUIRY/inventory/Player_item_ids.sql` | 플레이어 아이템 ID 조회 | 아이템 ID 목록용 |
 | `INQUIRY/npc/Detail_npc.sql` | NPC 상세 정보 | NPC 정보창용 |
 | `INQUIRY/phase/phase_rule.sql` | 페이즈 규칙 조회 | 규칙 엔진용 |
 | `INQUIRY/relations/Check_npc_relation.sql` | NPC 관계 확인 | 대화 조건 확인용 |
 | `INQUIRY/scenario/Detail_scenario.sql` | 시나리오 상세 | 시나리오 정보용 |
-| `INQUIRY/scenario/List_senario.sql` | 시나리오 목록 | 시나리오 선택용 (오타: senario) |
+| `INQUIRY/scenario/List_scenario.sql` | 시나리오 목록 | 시나리오 선택용 |
 
 ### UPDATE 폴더
 
@@ -146,10 +150,9 @@ Repository에서 아직 사용하지 않는 SQL 파일입니다. 향후 기능 �
 | `MANAGE/npc/inject_vertex_npc.sql` | NPC 버텍스 주입 | 그래프 DB용 |
 | `MANAGE/phase/is_action_allowed.sql` | 행동 허용 확인 | 규칙 엔진용 |
 | `MANAGE/scenario/activate_scenario.sql` | 시나리오 활성화 | 시나리오 관리용 |
-| `MANAGE/scenario/deactivate_scnario.sql` | 시나리오 비활성화 | 시나리오 관리용 (오타: scnario) |
+| `MANAGE/scenario/deactivate_scenario.sql` | 시나리오 비활성화 | 시나리오 관리용 |
 | `MANAGE/scenario/inject_edge_relation.sql` | 관계 엣지 주입 | ScenarioRepository inline 사용 |
 | `MANAGE/scenario/inject_scenario.sql` | 시나리오 주입 | ScenarioRepository inline 사용 |
-| `MANAGE/session/paused_check-r.sql` | 일시정지 확인 | 레거시 파일 (-r 접미사) |
 
 ### TRACE 폴더
 
@@ -168,11 +171,11 @@ Repository에서 아직 사용하지 않는 SQL 파일입니다. 향후 기능 �
 | 경로 | 용도 |
 |------|------|
 | `DEBUG/Analyze/A_phase.sql` | Phase 분석 |
-| `DEBUG/Debuggig/D_enemy.sql` | 적 디버깅 |
-| `DEBUG/Debuggig/D_phase.sql` | Phase 디버깅 |
-| `DEBUG/Debuggig/D_player.sql` | 플레이어 디버깅 |
-| `DEBUG/Debuggig/D_scenario.sql` | 시나리오 디버깅 |
-| `DEBUG/Debuggig/D_session.sql` | 세션 디버깅 |
+| `DEBUG/Debugging/D_enemy.sql` | 적 디버깅 |
+| `DEBUG/Debugging/D_phase.sql` | Phase 디버깅 |
+| `DEBUG/Debugging/D_player.sql` | 플레이어 디버깅 |
+| `DEBUG/Debugging/D_scenario.sql` | 시나리오 디버깅 |
+| `DEBUG/Debugging/D_session.sql` | 세션 디버깅 |
 | `DEBUG/History/H_enemy.sql` | 적 히스토리 |
 | `DEBUG/History/H_inventory.sql` | 인벤토리 히스토리 |
 | `DEBUG/History/H_item.sql` | 아이템 히스토리 |
@@ -227,7 +230,7 @@ DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다. (
 |--------|------|------|
 | `Session_*` | 세션 기준 조회 | `Session_turn.sql`, `Session_npc.sql` |
 | `Current_*` | 현재 상태 조회 | `Current_act.sql`, `Current_sequence.sql` |
-| `List_*` | 목록 조회 | `List_senario.sql` |
+| `List_*` | 목록 조회 | `List_scenario.sql` |
 | `Detail_*` | 상세 정보 조회 | `Detail_item.sql`, `Detail_npc.sql` |
 | `Check_*` | 조건 확인 | `Check_item.sql`, `Check_npc_relation.sql` |
 | `get_*` | 데이터 가져오기 | `get_history.sql`, `get_latest.sql` |
@@ -253,24 +256,6 @@ DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다. (
 
 ---
 
-## 5. 알려진 이슈
-
-### 오타가 있는 파일명
-
-| 현재 | 수정 권장 |
-|------|-----------|
-| `List_senario.sql` | `List_scenario.sql` |
-| `deactivate_scnario.sql` | `deactivate_scenario.sql` |
-| `DEBUG/Debuggig/` | `DEBUG/Debugging/` |
-
-### 레거시 파일
-
-| 파일 | 비고 |
-|------|------|
-| `paused_check-r.sql` | `-r` 접미사 - 삭제 후 남은 파일로 추정 |
-
----
-
 ## 수정 이력
 
 | 날짜 | 내용 |
@@ -280,3 +265,8 @@ DDL 정의 파일입니다. 테이블 생성 및 초기화에 사용됩니다. (
 | 2026-01-29 | -r 폴더 삭제, 중복 파일 통합, 파라미터 스타일 통일, Session JOIN 통일, 페이즈 전환 로직 통합, TRACE 파일 추가 완료 |
 | 2026-01-30 | 전체 SQL 파일 사용 현황 재정리, asyncpg 파라미터 형식 수정 완료 반영, 폴더별 역할 및 네이밍 규칙 문서화 |
 | 2026-02-02 | data 폴더 원본 파일 정리 (drop_item 타입 수정: UUID→INT, 오타 수정: enenmy_id→enemy_id, state_db_item_logic→state_db) |
+| 2026-02-03 | 신규 SQL 파일 추가: `depart_npc.sql`, `return_npc.sql`, `delete_session.sql`, `record_item_use.sql` |
+| 2026-02-03 | `Player_item_ids.sql` 미사용→사용 중으로 이동 (PlayerRepository에서 사용) |
+| 2026-02-03 | 파일명 오타 수정: `List_senario.sql`→`List_scenario.sql`, `deactivate_scnario.sql`→`deactivate_scenario.sql` |
+| 2026-02-03 | 폴더명 오타 수정: `DEBUG/Debuggig/`→`DEBUG/Debugging/` |
+| 2026-02-03 | 레거시 파일 삭제: `paused_check-r.sql` |

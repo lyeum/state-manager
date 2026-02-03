@@ -9,7 +9,7 @@ State Manager API 레퍼런스 문서입니다. 게임 세션의 상태 관리�
 | # | 섹션 | 설명 |
 |---|------|------|
 | 0 | [공통 응답 형식](#공통-응답-형식) | API 응답 구조 |
-| 1 | [Session Lifecycle](#1-session-lifecycle) | 세션 생성/종료/일시정지 |
+| 1 | [Session Lifecycle](#1-session-lifecycle) | 세션 생성/종료/삭제/일시정지 |
 | 2 | [Session Inquiry](#2-session-inquiry) | 세션 조회 |
 | 3 | [Phase/Turn Management](#3-phaseturn-management) | 게임 페이즈 및 턴 관리 |
 | 4 | [Act/Sequence Management](#4-actsequence-management) | 스토리 진행 관리 |
@@ -20,7 +20,8 @@ State Manager API 레퍼런스 문서입니다. 게임 세션의 상태 관리�
 | 9 | [Enemy Management](#9-enemy-management) | 적 관리 |
 | 10 | [TRACE - Turn History](#10-trace---turn-history) | 턴 이력 추적 |
 | 11 | [TRACE - Phase History](#11-trace---phase-history) | 페이즈 이력 추적 |
-| 12 | [Scenario Injection](#12-scenario-injection) | 시나리오 데이터 주입 |
+| 12 | [Scenario Management](#12-scenario-management) | 시나리오 조회 및 주입 |
+| 13 | [Proxy Health Check](#13-proxy-health-check) | 마이크로서비스 연결 확인 |
 | - | [Error Responses](#error-responses) | 에러 응답 형식 |
 | - | [Data Types Reference](#data-types-reference) | 데이터 타입 참조 |
 
@@ -46,12 +47,13 @@ State Manager API 레퍼런스 문서입니다. 게임 세션의 상태 관리�
 
 ## 1. Session Lifecycle
 
-세션의 생성, 종료, 일시정지, 재개를 관리합니다.
+세션의 생성, 종료, 삭제, 일시정지, 재개를 관리합니다.
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
 | POST | `/state/session/start` | 새 세션 시작 |
 | POST | `/state/session/{session_id}/end` | 세션 종료 |
+| DELETE | `/state/session/{session_id}` | 세션 완전 삭제 |
 | POST | `/state/session/{session_id}/pause` | 세션 일시정지 |
 | POST | `/state/session/{session_id}/resume` | 세션 재개 |
 
@@ -104,6 +106,26 @@ State Manager API 레퍼런스 문서입니다. 게임 세션의 상태 관리�
 ### POST /state/session/{session_id}/end
 
 세션을 종료합니다. 종료된 세션은 더 이상 수정할 수 없습니다.
+
+### DELETE /state/session/{session_id}
+
+세션을 완전히 삭제합니다. **CASCADE로 모든 관련 데이터(플레이어, NPC, Enemy, 인벤토리, 턴 이력 등)가 함께 삭제됩니다.**
+
+> **Warning**: Session 0 (마스터 세션)은 삭제할 수 없습니다.
+
+<details>
+<summary><b>Response (200 OK)</b></summary>
+
+```json
+{
+  "status": "success",
+  "data": {
+    "session_id": "550e8400-e29b-41d4-a716-446655440001",
+    "status": "deleted"
+  }
+}
+```
+</details>
 
 ### POST /state/session/{session_id}/pause
 
@@ -621,7 +643,9 @@ NPC(Non-Player Character)를 관리합니다.
 |--------|----------|------|
 | GET | `/state/session/{session_id}/npcs` | NPC 목록 조회 |
 | POST | `/state/session/{session_id}/npc/spawn` | NPC 스폰 |
-| DELETE | `/state/session/{session_id}/npc/{npc_instance_id}` | NPC 제거 |
+| DELETE | `/state/session/{session_id}/npc/{npc_instance_id}` | NPC 완전 제거 |
+| POST | `/state/session/{session_id}/npc/{npc_id}/depart` | NPC 퇴장 (soft delete) |
+| POST | `/state/session/{session_id}/npc/{npc_id}/return` | 퇴장한 NPC 복귀 |
 | PUT | `/state/npc/affinity` | 호감도 변경 |
 
 ### GET /state/session/{session_id}/npcs
@@ -670,6 +694,50 @@ NPC(Non-Player Character)를 관리합니다.
 ```
 </details>
 
+### DELETE /state/session/{session_id}/npc/{npc_instance_id}
+
+NPC를 세션에서 **완전히 제거**합니다. 제거된 데이터는 복구할 수 없습니다.
+
+### POST /state/session/{session_id}/npc/{npc_id}/depart
+
+NPC를 **퇴장 처리**합니다 (soft delete). 데이터는 유지되며, 나중에 복귀시킬 수 있습니다.
+
+<details>
+<summary><b>Response</b></summary>
+
+```json
+{
+  "status": "success",
+  "data": {
+    "npc_id": "550e8400-e29b-41d4-a716-446655440020",
+    "name": "Merchant Tom",
+    "departed": true,
+    "departed_at": "2026-02-03T10:00:00Z"
+  }
+}
+```
+</details>
+
+### POST /state/session/{session_id}/npc/{npc_id}/return
+
+**퇴장했던 NPC를 복귀**시킵니다.
+
+<details>
+<summary><b>Response</b></summary>
+
+```json
+{
+  "status": "success",
+  "data": {
+    "npc_id": "550e8400-e29b-41d4-a716-446655440020",
+    "name": "Merchant Tom",
+    "departed": false,
+    "returned_at": "2026-02-03T12:00:00Z"
+  }
+}
+```
+</details>
+
 ### PUT /state/npc/affinity
 
 플레이어와 NPC 간의 호감도를 변경합니다.
@@ -692,9 +760,9 @@ NPC(Non-Player Character)를 관리합니다.
 |--------|----------|------|
 | GET | `/state/session/{session_id}/enemies` | 적 목록 조회 |
 | POST | `/state/session/{session_id}/enemy/spawn` | 적 스폰 |
-| DELETE | `/state/session/{session_id}/enemy/{enemy_instance_id}` | 적 제거 |
+| DELETE | `/state/session/{session_id}/enemy/{enemy_instance_id}` | 적 완전 제거 |
 | PUT | `/state/enemy/{enemy_instance_id}/hp` | 적 HP 변경 |
-| POST | `/state/enemy/{enemy_instance_id}/defeat` | 적 처치 |
+| POST | `/state/enemy/{enemy_instance_id}/defeat` | 적 처치 (soft delete) |
 
 ### GET /state/session/{session_id}/enemies
 
@@ -729,9 +797,13 @@ NPC(Non-Player Character)를 관리합니다.
 ```
 </details>
 
+### DELETE /state/session/{session_id}/enemy/{enemy_instance_id}
+
+적을 세션에서 **완전히 제거**합니다. 제거된 데이터는 복구할 수 없습니다.
+
 ### POST /state/enemy/{enemy_instance_id}/defeat
 
-적을 처치 상태(`is_active: false`)로 변경합니다. 제거와 달리 데이터는 유지됩니다.
+적을 **처치 상태**(`is_active: false`)로 변경합니다. **데이터는 유지**되며 이력 추적이 가능합니다.
 
 **Query Parameters:** `session_id` (UUID, required)
 
@@ -805,15 +877,45 @@ Phase 전환 이력을 추적하고 분석합니다.
 
 ---
 
-## 12. Scenario Injection
+## 12. Scenario Management
 
-시나리오 데이터(NPC, Enemy, Item, Act, Sequence, Relation)를 주입합니다.
+시나리오를 조회하고, 시나리오 데이터(NPC, Enemy, Item, Act, Sequence, Relation)를 주입합니다.
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| POST | `/state/inject/scenario` | 시나리오 데이터 주입 |
+| GET | `/state/scenarios` | 전체 시나리오 목록 조회 |
+| GET | `/state/scenario/{scenario_id}` | 특정 시나리오 상세 조회 |
+| POST | `/state/scenario/inject` | 시나리오 데이터 주입 |
 
-### POST /state/inject/scenario
+### GET /state/scenarios
+
+전체 시나리오 목록을 조회합니다.
+
+<details>
+<summary><b>Response</b></summary>
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "scenario_id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "The Dark Forest",
+      "description": "A mysterious adventure in the dark forest",
+      "is_published": true,
+      "created_at": "2026-01-30T10:00:00Z",
+      "updated_at": "2026-01-30T12:00:00Z"
+    }
+  ]
+}
+```
+</details>
+
+### GET /state/scenario/{scenario_id}
+
+특정 시나리오의 상세 정보를 조회합니다.
+
+### POST /state/scenario/inject
 
 시나리오 데이터를 데이터베이스에 주입합니다. 동일한 title의 시나리오가 있으면 업데이트됩니다.
 
@@ -910,6 +1012,53 @@ Phase 전환 이력을 추적하고 분석합니다.
 
 ---
 
+## 13. Proxy Health Check
+
+마이크로서비스(Rule Engine, GM) 연결 상태를 확인합니다.
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/state/health/proxy` | 전체 프록시 연결 상태 |
+| GET | `/state/health/proxy/rule-engine` | Rule Engine 연결 확인 |
+| GET | `/state/health/proxy/gm` | GM 서비스 연결 확인 |
+
+### GET /state/health/proxy
+
+모든 마이크로서비스의 연결 상태를 한 번에 확인합니다.
+
+<details>
+<summary><b>Response</b></summary>
+
+```json
+{
+  "status": "success",
+  "data": {
+    "status": "healthy",
+    "services": {
+      "rule_engine": "connected",
+      "gm": "connected"
+    }
+  }
+}
+```
+</details>
+
+**상태 값:**
+| 상태 | 설명 |
+|------|------|
+| `healthy` | 모든 서비스 정상 연결 |
+| `degraded` | 일부 서비스 연결 실패 |
+
+### GET /state/health/proxy/rule-engine
+
+Rule Engine 서비스의 연결 상태를 확인합니다.
+
+### GET /state/health/proxy/gm
+
+GM 서비스의 연결 상태를 확인합니다.
+
+---
+
 ## Error Responses
 
 | 상태 코드 | 설명 | 예시 |
@@ -964,3 +1113,7 @@ Phase 전환 이력을 추적하고 분석합니다.
 | 2026-02-01 | `GET /act/details` 버그 수정, `GET /sequence/details` 신규 추가 |
 | 2026-02-01 | `GET /sequence/details`에 엔티티 및 관계 정보 포함 |
 | 2026-02-01 | 문서 가독성 개선 (목차 테이블화, 긴 예제 접기, 엔드포인트 요약 테이블 추가) |
+| 2026-02-03 | 신규 엔드포인트 추가: `DELETE /session`, `POST /npc/depart`, `POST /npc/return` |
+| 2026-02-03 | Scenario Management 섹션 추가 (`GET /scenarios`, `GET /scenario/{id}`) |
+| 2026-02-03 | Proxy Health Check 섹션 추가 (마이크로서비스 연결 상태 확인) |
+| 2026-02-03 | NPC/Enemy 제거 방식 명확화 (DELETE=완전제거, defeat/depart=soft delete) |
