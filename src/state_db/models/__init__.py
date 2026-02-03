@@ -3,7 +3,9 @@ from .entity import (
     EnemyHPUpdateResult,
     EnemyInfo,
     ItemInfo,
+    NPCDepartResult,
     NPCInfo,
+    NPCReturnResult,
     RemoveEntityResult,
     SpawnResult,
 )
@@ -60,6 +62,8 @@ __all__ = [
     "SequenceChangeResult",
     "SpawnResult",
     "RemoveEntityResult",
+    "NPCDepartResult",
+    "NPCReturnResult",
     "StateUpdateResult",
     "ApplyJudgmentSkipped",
     "ScenarioActInfo",

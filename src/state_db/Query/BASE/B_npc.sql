@@ -38,7 +38,11 @@ CREATE TABLE IF NOT EXISTS npc (
     }'::jsonb,
 
     -- RELATION 엣지 ID 저장
-    relations JSONB DEFAULT '[]'::jsonb
+    relations JSONB DEFAULT '[]'::jsonb,
+
+    -- 상태 플래그 (soft delete)
+    is_departed BOOLEAN NOT NULL DEFAULT false,
+    departed_at TIMESTAMP
 );
 
 -- 인덱스 생성

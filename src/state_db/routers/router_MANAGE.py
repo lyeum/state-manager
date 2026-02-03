@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends
 from state_db.custom import WrappedResponse
 from state_db.models import (
     ActChangeResult,
+    NPCDepartResult,
+    NPCReturnResult,
     PhaseChangeResult,
     RemoveEntityResult,
     SequenceChangeResult,
@@ -72,6 +74,17 @@ async def resume_session(
     return {"status": "success", "data": {"message": f"Session {session_id} resumed"}}
 
 
+@router.delete(
+    "/session/{session_id}", response_model=WrappedResponse[Dict[str, str]]
+)
+async def delete_session(
+    session_id: str, repo: Annotated[SessionRepository, Depends(get_session_repo)]
+) -> Dict[str, Any]:
+    """세션 완전 삭제 (CASCADE로 모든 관련 데이터 삭제)"""
+    result = await repo.delete(session_id)
+    return {"status": "success", "data": result}
+
+
 # ====================================================================
 # Entity 관리 - Enemy
 # ====================================================================
@@ -129,6 +142,34 @@ async def remove_npc_endpoint(
     repo: Annotated[EntityRepository, Depends(get_entity_repo)],
 ) -> Dict[str, Any]:
     result = await repo.remove_npc(session_id, npc_instance_id)
+    return {"status": "success", "data": result}
+
+
+@router.post(
+    "/session/{session_id}/npc/{npc_id}/depart",
+    response_model=WrappedResponse[NPCDepartResult],
+)
+async def depart_npc_endpoint(
+    session_id: str,
+    npc_id: str,
+    repo: Annotated[EntityRepository, Depends(get_entity_repo)],
+) -> Dict[str, Any]:
+    """NPC 퇴장 처리 (soft delete)"""
+    result = await repo.depart_npc(session_id, npc_id)
+    return {"status": "success", "data": result}
+
+
+@router.post(
+    "/session/{session_id}/npc/{npc_id}/return",
+    response_model=WrappedResponse[NPCReturnResult],
+)
+async def return_npc_endpoint(
+    session_id: str,
+    npc_id: str,
+    repo: Annotated[EntityRepository, Depends(get_entity_repo)],
+) -> Dict[str, Any]:
+    """퇴장한 NPC 복귀 처리"""
+    result = await repo.return_npc(session_id, npc_id)
     return {"status": "success", "data": result}
 
 

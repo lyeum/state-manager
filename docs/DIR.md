@@ -11,6 +11,7 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | 파일 | 역할 |
 |------|------|
 | `pyproject.toml` | 프로젝트 메타데이터, 의존성 정의 (Python 3.11+, tenacity 포함) |
+| `uv.lock` | uv 패키지 매니저 락 파일 |
 | `.env.example` | 환경변수 템플릿 (DB, 서버, Apache AGE, 프록시 설정) |
 | `.python-version` | Python 버전 명시 |
 | `.pre-commit-config.yaml` | Pre-commit 훅 설정 (Ruff, Markdown lint) |
@@ -22,6 +23,7 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | 파일 | 역할 |
 |------|------|
 | `Dockerfile` | 멀티스테이지 Docker 빌드 설정 |
+| `Dockerfile.txt` | Dockerfile 참조/백업 |
 | `docker-compose.yml` | 기본 compose 설정 |
 | `docker-compose.local.yml` | 로컬 개발 환경 |
 | `docker-compose.dev.yml` | 개발 환경 설정 |
@@ -31,6 +33,12 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | 파일 | 역할 |
 |------|------|
 | `CORE_ENGINE_HANDBOOK.md` | 프로젝트 철학, 핵심 설계 원칙, 기술 스택 설명 |
+
+### 기타 디렉토리
+
+| 디렉토리 | 역할 |
+|----------|------|
+| `/age` | Apache AGE 관련 리소스 (예정) |
 
 ---
 
@@ -154,7 +162,7 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 
 ## `/src/state_db/Query` - SQL 쿼리 디렉토리
 
-### `/Query/BASE` - 스키마 생성 및 초기화
+### `/Query/BASE` - 최초 DB 생성 및 초기화용 DDL
 
 **스키마 테이블 (B_\*)**: 테이블 정의
 - `B_session.sql`, `B_player.sql`, `B_enemy.sql`, `B_npc.sql`, `B_item.sql`
@@ -166,9 +174,13 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 - `L_session.sql` ~ `L_turn.sql`: 각 테이블별 트리거
 - `L_graph.sql`: 세션 생성 시 관계 엣지 복제 (핵심)
 
+**기타**: `entity_schema.json` (엔티티 스키마 정의)
+
 ---
 
 ### `/Query/INQUIRY` - 데이터 조회
+
+**루트 파일**: `Current_act.sql`, `Current_sequence.sql`, `Location_now.sql`, `Npc_relations.sql`, `Player_stats.sql`, `Progress_get.sql`
 
 | 하위 폴더 | 역할 |
 |-----------|------|
@@ -188,17 +200,19 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `/act` | Act 추가, 선택, 이전으로 되돌리기 |
 | `/enemy` | 적 마스터 주입, 스폰, 제거 |
 | `/item` | 아이템 마스터 주입 |
-| `/npc` | NPC 마스터 주입, 스폰, 제거 |
+| `/npc` | NPC 마스터 주입, 스폰, 제거, 퇴장(depart), 복귀(return) |
 | `/location` | 위치 변경 |
 | `/phase` | 페이즈 변경, 액션 허용 여부 확인 |
 | `/scenario` | 시나리오 활성화/비활성화, 엣지 관계 주입 |
 | `/sequence` | Sequence 추가, 선택, 제한 |
-| `/session` | 세션 종료, 일시정지, 재개 |
+| `/session` | 세션 종료, 일시정지, 재개, 삭제 |
 | `/turn` | 턴 추가, 턴 변경 기록 |
 
 ---
 
 ### `/Query/UPDATE` - 상태 수정
+
+**루트 파일**: `defeated_enemy.sql`
 
 | 하위 폴더 | 역할 |
 |-----------|------|
@@ -229,13 +243,16 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `C_session.sql` | 세션 생성 |
 | `N_npc.sql` | NPC 복제 |
 | `E_player_inventory.sql` | 플레이어 인벤토리 생성 |
-| `*.cypher` | 그래프 관계 생성 쿼리 |
+| `relation.cypher` | 관계 엣지 생성 |
+| `player_inventory.cypher` | 플레이어 인벤토리 그래프 생성 |
+| `earn_item.cypher` | 아이템 획득 그래프 생성 |
+| `used_item.cypher` | 아이템 사용 그래프 생성 |
 
 ---
 
-### `/Query/FIRST` - 최초 실행 쿼리
+### `/Query/FIRST` - 최초 실행 쿼리 (백업용)
 
-시나리오 초기 설정을 위한 쿼리들 (player, enemy, npc, item, phase, session 등)
+> ⚠️ 이 폴더는 백업/참조용입니다.
 
 ---
 
@@ -249,33 +266,9 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 
 ---
 
-## `/src/state_db/data` - 데이터 정의 및 그래프 스키마
+## `/src/state_db/data` - 데이터 정의 및 그래프 스키마 (백업용)
 
-### `/data/node` - 노드(엔티티) 정의
-
-| 하위 폴더 | 역할 |
-|-----------|------|
-| `/core` | session, phase, turn 엔티티 스키마 |
-| `/actor` | player, enemy, npc 엔티티 스키마 |
-| `/asset/item` | 아이템 스키마 |
-| `/asset/inventory` | 인벤토리 스키마 |
-| `/asset/ability` | 능력치/레벨 스키마 |
-| `/FK` | 외래키 참조 (시나리오) |
-
-### `/data/edge` - 관계(엣지) 정의
-
-| 하위 폴더 | 역할 |
-|-----------|------|
-| `/ASSET` | 플레이어 능력치, 인벤토리 관계 |
-| `/COMBAT` | 전투 관련 관계 (아이템 드랍) |
-| `/RELATION` | NPC/플레이어 관계, 호감도 |
-
-### `/data/trigger_concept` - 트리거 정의
-
-| 파일 | 역할 |
-|------|------|
-| `trigger.sql` | 일반 트리거 정의 |
-| `session_trigger.sql` | 세션 관련 트리거 |
+> ⚠️ 이 폴더는 백업/참조용입니다.
 
 ---
 
@@ -284,14 +277,20 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | 파일 | 역할 |
 |------|------|
 | `conftest.py` | Pytest 픽스처, DB 컨테이너 설정 |
+| `test_main.py` | 메인 앱 진입점 테스트 |
+| `test_pipeline.py` | 상태 처리 파이프라인 테스트 |
 | `test_logic_integration.py` | 시나리오 및 관계 복제 테스트 |
 | `test_system_integrity.py` | 세션 격리 및 데이터 무결성 테스트 |
 | `test_db_logic_full.py` | 종합 DB 로직 검증 |
-| `test_router_*.py` | 각 라우터별 API 엔드포인트 테스트 |
+| `test_router.py` | 기본 라우터 테스트 |
+| `test_router_START.py` | 세션 시작 라우터 테스트 |
+| `test_router_INJECT.py` | 시나리오 주입 라우터 테스트 |
+| `test_router_INQUIRY.py` | 데이터 조회 라우터 테스트 |
+| `test_router_UPDATE.py` | 상태 업데이트 라우터 테스트 |
+| `test_router_MANAGE.py` | 엔티티 관리 라우터 테스트 |
+| `test_router_TRACE.py` | 히스토리 트레이스 라우터 테스트 |
 | `test_router_PROXY.py` | 프록시 헬스체크 엔드포인트 테스트 |
 | `test_proxy.py` | HTTPClientManager, proxy_request 유닛 테스트 |
-| `test_main.py` | 메인 앱 진입점 테스트 |
-| `test_pipeline.py` | 상태 처리 파이프라인 테스트 |
 | `test_scenario_advanced.py` | 고급 시나리오 작업 테스트 |
 
 ---
@@ -303,7 +302,10 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 | `END_POINTS.md` | 전체 API 엔드포인트 레퍼런스 |
 | `BE_operation.md` | 백엔드 운영 가이드 |
 | `BE_plan.md` | 백엔드 프록시 작업 계획서 |
+| `plan.md` | 작업 계획서 |
+| `plan3.md` | 추가 작업 계획서 |
 | `plan4.md` | Proxy/Logger/ColorFormatter 구현 계획 |
+| `current_task.md` | 현재 진행 중인 작업 정리 |
 | `DIR.md` | 디렉토리 구조 문서 (현재 파일) |
 | `SCENARIO_INTEGRATION_GUIDE.md` | 시나리오 통합 가이드 |
 | `UNUSED_SQL.md` | 미사용 SQL 파일 문서화 |
@@ -334,7 +336,13 @@ TRPG 게임 상태 관리 시스템의 전체 디렉토리 구조와 각 파일�
 |------|------|
 | `/workflows/ci-dev.yml` | 개발 CI 파이프라인 |
 | `/workflows/cd.yml` | 지속적 배포 파이프라인 |
-| `/ISSUE_TEMPLATE/` | 이슈 템플릿 (Feat, Fix, Refactor 등) |
+| `/ISSUE_TEMPLATE/Feat.yml` | 기능 추가 이슈 템플릿 |
+| `/ISSUE_TEMPLATE/Fix.yml` | 버그 수정 이슈 템플릿 |
+| `/ISSUE_TEMPLATE/Ref.yml` | 리팩토링 이슈 템플릿 |
+| `/ISSUE_TEMPLATE/Test.yml` | 테스트 이슈 템플릿 |
+| `/ISSUE_TEMPLATE/Docs.yml` | 문서 이슈 템플릿 |
+| `/ISSUE_TEMPLATE/Chore.yml` | 기타 작업 이슈 템플릿 |
+| `/ISSUE_TEMPLATE/Ops.yml` | 운영/인프라 이슈 템플릿 |
 | `pull_request_template.md` | PR 템플릿 |
 
 ---
@@ -397,4 +405,4 @@ main.py (FastAPI 앱)
 
 ---
 
-*마지막 업데이트: 2026-02-02 (Proxy/Logger/ColorFormatter 추가)*
+*마지막 업데이트: 2026-02-03*

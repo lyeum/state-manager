@@ -34,6 +34,17 @@ class SessionRepository(BaseRepository):
         sql_path = self.query_dir / "MANAGE" / "session" / "end_session.sql"
         await run_sql_command(sql_path, [session_id])
 
+    async def delete(self, session_id: str) -> dict:
+        """세션 완전 삭제 (CASCADE로 관련 데이터 모두 삭제)"""
+        sql_path = self.query_dir / "MANAGE" / "session" / "delete_session.sql"
+        result = await run_sql_query(sql_path, [session_id])
+        if result:
+            return {"session_id": session_id, "status": "deleted"}
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found or is Session 0 (protected)",
+        )
+
     async def pause(self, session_id: str) -> None:
         sql_path = self.query_dir / "MANAGE" / "session" / "pause_session.sql"
         await run_sql_command(sql_path, [session_id])

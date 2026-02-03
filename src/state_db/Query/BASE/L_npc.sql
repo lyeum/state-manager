@@ -7,12 +7,12 @@ BEGIN
     INSERT INTO npc (
         npc_id, entity_type, name, description, session_id,
         assigned_sequence_id, assigned_location, scenario_id, scenario_npc_id,
-        tags, state, relations
+        tags, state, relations, is_departed, departed_at
     )
     SELECT
         gen_random_uuid(), n.entity_type, n.name, n.description, NEW.session_id,
         n.assigned_sequence_id, n.assigned_location, n.scenario_id, n.scenario_npc_id,
-        n.tags, n.state, n.relations
+        n.tags, n.state, n.relations, false, NULL
     FROM npc n
     WHERE n.session_id = MASTER_SESSION_ID
       AND n.scenario_id = NEW.scenario_id;

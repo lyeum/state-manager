@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS item (
     -- 세션 참조 | 세션 시작하면 생성되서 받아오면 됨
     session_id UUID NOT NULL REFERENCES session(session_id) ON DELETE CASCADE,
 
-    name VARCHAR(20) NOT NULL,
+    name VARCHAR(40) NOT NULL,
     description TEXT DEFAULT '',
 
     -- 아이템 분류 (소모품, 장비, 퀘스트 아이템 등)

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional, Union
 from uuid import UUID
 
@@ -16,6 +17,7 @@ class NPCInfo(BaseModel):
     state: Optional[JsonField] = None
     assigned_sequence_id: Optional[str] = None
     assigned_location: Optional[str] = None
+    is_departed: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -58,4 +60,21 @@ class SpawnResult(BaseModel):
 
 class RemoveEntityResult(BaseModel):
     status: str = "success"
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NPCDepartResult(BaseModel):
+    npc_id: Union[str, UUID]
+    scenario_npc_id: str
+    name: str
+    is_departed: bool
+    departed_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NPCReturnResult(BaseModel):
+    npc_id: Union[str, UUID]
+    scenario_npc_id: str
+    name: str
+    is_departed: bool
     model_config = ConfigDict(from_attributes=True)

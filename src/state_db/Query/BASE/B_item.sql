@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS item (
     scenario_id UUID NOT NULL,
     scenario_item_id VARCHAR(100) NOT NULL, -- 직관적 식별자 (예: 'ITEM_POTION_01')
 
-    name VARCHAR(20) NOT NULL,
+    name VARCHAR(40) NOT NULL,
     description TEXT DEFAULT '',
 
     -- 아이템 분류 (소모품, 장비, 퀘스트 아이템 등)

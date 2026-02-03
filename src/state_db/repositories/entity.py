@@ -7,7 +7,9 @@ from state_db.models import (
     EnemyHPUpdateResult,
     EnemyInfo,
     ItemInfo,
+    NPCDepartResult,
     NPCInfo,
+    NPCReturnResult,
     RemoveEntityResult,
     SpawnResult,
 )
@@ -22,9 +24,11 @@ class EntityRepository(BaseRepository):
         return [ItemInfo.model_validate(row) for row in results]
 
     # NPC
-    async def get_session_npcs(self, session_id: str) -> List[NPCInfo]:
+    async def get_session_npcs(
+        self, session_id: str, active_only: bool = True
+    ) -> List[NPCInfo]:
         sql_path = self.query_dir / "INQUIRY" / "session" / "Session_npc.sql"
-        results = await run_sql_query(sql_path, [session_id])
+        results = await run_sql_query(sql_path, [session_id, active_only])
         return [NPCInfo.model_validate(row) for row in results]
 
     async def spawn_npc(self, session_id: str, data: Dict[str, Any]) -> SpawnResult:
@@ -50,6 +54,26 @@ class EntityRepository(BaseRepository):
         sql_path = self.query_dir / "MANAGE" / "npc" / "remove_npc.sql"
         await run_sql_command(sql_path, [npc_instance_id, session_id])
         return RemoveEntityResult()
+
+    async def depart_npc(
+        self, session_id: str, npc_id: str
+    ) -> NPCDepartResult:
+        """NPC 퇴장 처리 (soft delete)"""
+        sql_path = self.query_dir / "MANAGE" / "npc" / "depart_npc.sql"
+        result = await run_sql_query(sql_path, [npc_id, session_id])
+        if result:
+            return NPCDepartResult.model_validate(result[0])
+        raise HTTPException(status_code=404, detail="NPC not found or already departed")
+
+    async def return_npc(
+        self, session_id: str, npc_id: str
+    ) -> NPCReturnResult:
+        """퇴장한 NPC 복귀 처리"""
+        sql_path = self.query_dir / "MANAGE" / "npc" / "return_npc.sql"
+        result = await run_sql_query(sql_path, [npc_id, session_id])
+        if result:
+            return NPCReturnResult.model_validate(result[0])
+        raise HTTPException(status_code=404, detail="NPC not found or not departed")
 
     # Enemy
     async def get_session_enemies(

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS player (
     -- 엔티티 필수
     player_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type VARCHAR(50) NOT NULL DEFAULT 'player',
-    name VARCHAR(20) NOT NULL,
+    name VARCHAR(40) NOT NULL,
     description TEXT DEFAULT '',
 
     -- session 자동 참조
